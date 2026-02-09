@@ -1,0 +1,5 @@
+-xc
+-std=c99
+-Iinclude
+-Wall
+-Wextra

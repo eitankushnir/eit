@@ -2,6 +2,7 @@
 #define STRBUF_H
 
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 
 /**
@@ -51,5 +52,9 @@ void strbuf_addf(strbuf *sb, const char *fmt, ...)
 
 // Read file contents into buffer.
 // returns 0 on success -1 on failure.
-int strbuf_read_file(strbuf *sb, const char *path);
+int strbuf_read_file(strbuf *sb, FILE* file);
+
+// Read file contents into buffer.
+// returns 0 on success -1 on failure.
+int strbuf_read_file_line(strbuf* sb, FILE* file);
 #endif

@@ -1,30 +1,37 @@
 #include "strbuf.h"
+#include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdarg.h>
 
-void strbuf_init(strbuf *sb) {
-  sb->alloc = 0;
-  sb->len = 0;
-  sb->buf = NULL;
+void strbuf_init(strbuf* sb)
+{
+    sb->alloc = 0;
+    sb->len = 0;
+    sb->buf = NULL;
 }
 
-void strbuf_free(strbuf *sb) {
-  free(sb->buf);
-  strbuf_init(sb);
+void strbuf_free(strbuf* sb)
+{
+    if (sb->buf != NULL) {
+        free(sb->buf);
+    }
+    strbuf_init(sb);
 }
 
-char *strbuf_detach(strbuf *sb, size_t *size) {
-  char *buf = sb->buf;
-  if (size) *size = sb->alloc;
-  strbuf_init(sb);
-  return buf;
+char* strbuf_detach(strbuf* sb, size_t* size)
+{
+    char* buf = sb->buf;
+    if (size)
+        *size = sb->alloc;
+    strbuf_init(sb);
+    return buf;
 }
 
-void strbuf_grow(strbuf *sb, size_t extra) {
+void strbuf_grow(strbuf* sb, size_t extra)
+{
     if (sb->alloc > sb->len + extra) {
         // We already have enough space.
         return;
@@ -38,7 +45,7 @@ void strbuf_grow(strbuf *sb, size_t extra) {
         new_alloc = sb->len + extra + 1;
     }
 
-    char *new_buf = realloc(sb->buf, new_alloc);
+    char* new_buf = realloc(sb->buf, new_alloc);
     if (!new_buf) {
         perror("strbuf_grow failed");
         exit(1);
@@ -48,7 +55,8 @@ void strbuf_grow(strbuf *sb, size_t extra) {
     sb->alloc = new_alloc;
 }
 
-void strbuf_add(strbuf *sb, void *data, size_t len) {
+void strbuf_add(strbuf* sb, void* data, size_t len)
+{
     strbuf_grow(sb, len + 1);
     memcpy(sb->buf + sb->len, data, len);
 
@@ -56,10 +64,11 @@ void strbuf_add(strbuf *sb, void *data, size_t len) {
     sb->buf[sb->len] = '\0'; // Ensure null termination.
 }
 
-void strbuf_addf(strbuf *sb, const char *fmt, ...) {
+void strbuf_addf(strbuf* sb, const char* fmt, ...)
+{
     va_list ap;
     va_start(ap, fmt);
-    
+
     int len = vsnprintf(NULL, 0, fmt, ap);
     va_end(ap);
 
@@ -77,8 +86,9 @@ void strbuf_addf(strbuf *sb, const char *fmt, ...) {
     sb->len += len;
 }
 
-int strbuf_read_file_line(strbuf *sb, FILE* file) {
-    if (file == NULL) 
+int strbuf_read_file_line(strbuf* sb, FILE* file)
+{
+    if (file == NULL)
         return -1;
 
     char buf[4096];
@@ -91,4 +101,4 @@ int strbuf_read_file_line(strbuf *sb, FILE* file) {
 
     strbuf_addstr(sb, buf);
     return 0;
-} 
+}

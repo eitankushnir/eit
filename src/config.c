@@ -1,4 +1,5 @@
 #include "config.h"
+#include "repository.h"
 #include "strbuf.h"
 #include "wrappers.h"
 #include <stdio.h>
@@ -12,8 +13,9 @@ void add_config(enum scope scope, char* category, char* key, char* value)
     if (scope == GLOBAL) {
         strbuf_addf(&path, "~/%s", CONFIG_FILE);
     } else if (scope == LOCAL) {
-        // TODO: make it be the repo root.
-        strbuf_addf(&path, "./%s", CONFIG_FILE);
+        char* reporoot = find_repository_root();
+        strbuf_addf(&path, "%s/%s", reporoot, CONFIG_FILE);
+        free(reporoot);
     }
 
     // 1. find if cat exits
@@ -125,7 +127,9 @@ char* read_config_str(char* category, char* key)
     // 3. return the last value set for the key.
 
     strbuf path = STRBUF_INIT;
-    strbuf_addf(&path, "./%s", CONFIG_FILE);
+    char* reporoot = find_repository_root();
+    strbuf_addf(&path, "%s/%s", reporoot, CONFIG_FILE);
+    free(reporoot);
 
     char* value = find_value(path.buf, category, key);
     if (value) {

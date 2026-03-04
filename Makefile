@@ -1,7 +1,7 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -g -std=c99 -Iinclude
+CFLAGS = -Wall -Wextra -g -std=c11 -Iinclude -D_XOPEN_SOURCE=700
 
-SRCS = $(wildcard src/*.c)
+SRCS = $(wildcard src/*.c) $(wildcard src/commands/*.c)
 
 OBJS = $(patsubst src/%.c, build/%.o, $(SRCS))
 

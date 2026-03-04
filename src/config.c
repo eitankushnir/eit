@@ -140,7 +140,7 @@ char* read_config_str(char* category, char* key)
 
     strbuf_free(&path);
     strbuf_init(&path);
-    strbuf_addf(&path, "~/%s", CONFIG_FILE);
+    strbuf_addf(&path, "%s/%s", getenv("HOME"), CONFIG_FILE);
 
     value = find_value(path.buf, category, key);
     return value;

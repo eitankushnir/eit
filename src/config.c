@@ -11,7 +11,7 @@ void add_config(enum scope scope, char* category, char* key, char* value)
 
     strbuf path = STRBUF_INIT;
     if (scope == GLOBAL) {
-        strbuf_addf(&path, "~/%s", CONFIG_FILE);
+        strbuf_addf(&path, "%s/%s", getenv("HOME"), CONFIG_FILE);
     } else if (scope == LOCAL) {
         char* reporoot = find_repository_root();
         strbuf_addf(&path, "%s/%s", reporoot, CONFIG_FILE);
@@ -38,8 +38,6 @@ void add_config(enum scope scope, char* category, char* key, char* value)
                 found_cat_flag = 1;
             }
 
-            printf("%s", lines.buf);
-
             // Reached the category after.
 
             last_line_read++;
@@ -54,6 +52,10 @@ void add_config(enum scope scope, char* category, char* key, char* value)
     strbuf_addf(&keyvalue, "\t%s = %s\n", key, value);
     if (!found_cat_flag) {
         FILE* conffile = fopen(path.buf, "ab");
+        if (!conffile) {
+            perror("Failed to open config file\n");
+            die("");
+        }
         fwrite(category_header.buf, sizeof(char), category_header.len, conffile);
         fwrite(keyvalue.buf, sizeof(char), keyvalue.len, conffile);
         fclose(conffile);

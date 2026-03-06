@@ -1,10 +1,11 @@
 #include "commands.h"
+#include "repository.h"
 #include "config.h"
 #include <getopt.h>
 #include <stdio.h>
 #include <string.h>
 
-int cmd_config(char **argv, int argc) {
+int cmd_config(char **argv, int argc, repository* repo) {
 
     struct option opts[] = {
         { "scope", required_argument, 0, 's' },
@@ -16,7 +17,7 @@ int cmd_config(char **argv, int argc) {
     enum scope scope = LOCAL;
 
     // Get the scope from the args
-    while (( option_val = getopt_long(argc, argv, "gl", opts, &opindex)) != -1) {
+    while (( option_val = getopt_long(argc, argv, "s", opts, &opindex)) != -1) {
         switch (option_val) {
             case 's':
                 if (strcmp(optarg, "global") == 0) scope = GLOBAL;

@@ -11,11 +11,19 @@ typedef struct {
 } SHA256_CTX;
 
 typedef struct {
-    uint32_t hash[32];
+    int hash[32];
 } object_id;
+
 
 void sha256_init(SHA256_CTX* ctx);
 void sha256_update(SHA256_CTX* ctx, const uint8_t *data, size_t len);
-void sha256_final(SHA256_CTX *ctx, uint8_t hash[32]);
-void println_hash(uint8_t hash[32]);
+void sha256_final(SHA256_CTX *ctx, object_id* out);
+
+void oidcpy(object_id* dest, object_id* src);
+void println_oid(object_id* oid);
+char* oid_tostring(object_id* oid);
+
+void hash_file(const char* path, object_id* out);
+void hash_stdin(object_id* out);
+
 #endif

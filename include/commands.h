@@ -1,15 +1,17 @@
 #ifndef COMMANDS_H
 #define COMMANDS_H
 
-typedef int (*command_fn)(char** argv, int argc);
+#include "repository.h"
+typedef int (*command_fn)(char** argv, int argc, repository* repo);
 
 typedef struct {
     char* name;
     command_fn fn;
 } command;
 
-int cmd_init(char** argv, int argc);
-int cmd_help(char** argv, int argc);
-int cmd_config(char** argv, int argc);
+int cmd_init(char** argv, int argc, repository* repo);
+int cmd_help(char** argv, int argc, repository* repo);
+int cmd_config(char** argv, int argc, repository* repo);
+int cmd_hash_object(char** argv, int argc, repository* repo);
 
 #endif

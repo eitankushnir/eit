@@ -1,2 +1,5 @@
 build
 eit
+.eit
+*.txt
+.eitconfig

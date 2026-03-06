@@ -5,9 +5,10 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 
-int cmd_init(char** argv, int argc)
+int cmd_init(char** argv, int argc, repository* repo)
 {
-    char* check = find_repository_root();
+
+    char* check = repo->repo_dir;
     strbuf repo_dir = STRBUF_INIT;
     strbuf object_store_path = STRBUF_INIT;
     strbuf refs_path = STRBUF_INIT;
@@ -16,12 +17,12 @@ int cmd_init(char** argv, int argc)
     strbuf refs_tags_path = STRBUF_INIT;
 
     if (check) {
-        strbuf_addf(&repo_dir, "%s/%s", check, REPO_DIR);
-        strbuf_addf(&object_store_path, "%s/%s/objects", check, REPO_DIR);
-        strbuf_addf(&refs_path, "%s/%s/refs", check, REPO_DIR);
-        strbuf_addf(&refs_heads_path, "%s/%s/refs/heads", check, REPO_DIR);
-        strbuf_addf(&refs_remotes_path, "%s/%s/refs/remotes", check, REPO_DIR);
-        strbuf_addf(&refs_tags_path, "%s/%s/refs/tags", check, REPO_DIR);
+        strbuf_addf(&repo_dir, "%s", check);
+        strbuf_addf(&object_store_path, "%s/objects", check);
+        strbuf_addf(&refs_path, "%s/refs", check);
+        strbuf_addf(&refs_heads_path, "%s/refs/heads", check);
+        strbuf_addf(&refs_remotes_path, "%s/refs/remotes", check);
+        strbuf_addf(&refs_tags_path, "%s/refs/tags", check);
     } else {
         strbuf_addf(&repo_dir, "./%s", REPO_DIR);
         strbuf_addf(&object_store_path, "./%s/objects", REPO_DIR);

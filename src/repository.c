@@ -54,3 +54,11 @@ char* find_repository_root(void)
     strbuf_free(&current_path);
     return NULL;
 }
+
+void init_current_repository_info(repository *repo) {
+    strbuf root = STRBUF_INIT;
+    char* repo_parent = find_repository_root();
+    strbuf_addf(&root, "%s/%s", repo_parent, REPO_DIR);
+    repo->repo_dir = strbuf_detach(&root, 0);
+    free(repo_parent);
+}

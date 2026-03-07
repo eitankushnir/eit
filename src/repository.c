@@ -1,6 +1,8 @@
 #include "repository.h"
 #include "strbuf.h"
+#include "wrappers.h"
 #include <dirent.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -44,7 +46,6 @@ char* find_repository_root(void)
             return NULL;
         }
 
-
         if (parent.st_ino == current.st_ino && current.st_dev == parent.st_dev) {
             // break at root.
             break;
@@ -55,10 +56,36 @@ char* find_repository_root(void)
     return NULL;
 }
 
-void init_current_repository_info(repository *repo) {
+void init_current_repository_info(repository* repo)
+{
     strbuf root = STRBUF_INIT;
     char* repo_parent = find_repository_root();
     strbuf_addf(&root, "%s/%s", repo_parent, REPO_DIR);
     repo->repo_dir = strbuf_detach(&root, 0);
-    free(repo_parent);
+    repo->repo_root = repo_parent;
+}
+
+char* path_in_repo(const char* path, repository* repo)
+{
+    char* abspath = realpath(path, NULL);
+    if (!abspath) {
+        strbuf err = STRBUF_INIT;
+        strbuf_addf(&err, "Failed to resolve %s", path);
+        perror(err.buf);
+        strbuf_free(&err);
+        die("");
+    }
+    char* buf = malloc(strlen(repo->repo_root) + 1);
+    int min = strlen(abspath) < strlen(repo->repo_root) ? strlen(abspath) : strlen(repo->repo_root);
+    strncpy(buf, abspath, min);
+    buf[min] = '\0';
+    if (strcmp(buf, repo->repo_root) != 0){
+        die("Fatal: Path is not inside repository at %s\n", repo->repo_root);
+        return NULL;
+    }
+    int len = strlen(abspath) - strlen(repo->repo_root);
+    char* repo_path = xmalloc(len, char);
+    strncpy(repo_path, abspath + strlen(repo->repo_root) + 1, len);
+    free(abspath);
+    return repo_path;
 }

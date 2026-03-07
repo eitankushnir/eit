@@ -4,7 +4,8 @@
 #define REPO_DIR ".eit"
 
 typedef struct {
-    char* repo_dir; // path to the .eit folder.
+    const char* repo_root; // path to the parent of .eit folder.
+    const char* repo_dir; // path to the .eit folder.
 } repository;
 
 // Find the root of the current repository and return the absolute path to it.
@@ -13,5 +14,9 @@ typedef struct {
 
 void init_current_repository_info(repository* repo);
 char* find_repository_root(void);
+
+// Returns NULL is the path is invalid.
+// Retuns a malloc'd path that begins in the repo.
+char* path_in_repo(const char* path, repository* repo);
 
 #endif

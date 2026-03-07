@@ -1,5 +1,6 @@
 #ifndef WRAPPERS_H
 #define WRAPPERS_H
+#include "repository.h"
 #include <stddef.h>
 #include <stdio.h>
 
@@ -11,5 +12,9 @@ void die(char* fmt, ...)
     __attribute__((format(printf, 1, 2)));
 
 int writeline(char* buf, int linenum, const char* path);
+int removeline(int linenum, const char* path);
+int replaceline(char* buf, int linenum, const char* path);
+size_t maxlinelen(FILE* f);
+int stage_can_be_written(repository* repo);
 
 #endif

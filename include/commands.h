@@ -13,5 +13,6 @@ int cmd_init(char** argv, int argc, repository* repo);
 int cmd_help(char** argv, int argc, repository* repo);
 int cmd_config(char** argv, int argc, repository* repo);
 int cmd_hash_object(char** argv, int argc, repository* repo);
+int cmd_update_stage(char** argv, int argc, repository* repo);
 
 #endif

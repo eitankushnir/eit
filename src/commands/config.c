@@ -22,7 +22,7 @@ int cmd_config(char **argv, int argc, repository* repo) {
             case 's':
                 if (strcmp(optarg, "global") == 0) scope = GLOBAL;
                 else if (strcmp(optarg, "local") == 0) scope = LOCAL;
-                else { printf("Error: Scope can either be 'local' or 'global'.\n"); return 1; }
+                else { fprintf(stderr, "Error: Scope can either be 'local' or 'global'.\n"); return 1; }
         }
     }
 

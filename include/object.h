@@ -1,6 +1,7 @@
 #ifndef OBJECT_H
 #define OBJECT_H
 
+#include "repository.h"
 #include "sha256.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,5 +27,7 @@ typedef struct {
 
 const char* type_name(object_type type);
 object_type type_from_name(char* name);
+
+void write_object(object_type type, FILE* src, repository* repo, object_id* out_oid);
 
 #endif

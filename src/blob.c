@@ -1,4 +1,5 @@
 #include "blob.h"
+#include "object.h"
 #include "repository.h"
 #include "sha256.h"
 #include "strbuf.h"
@@ -11,6 +12,11 @@
 
 void hash_blob_from_file(FILE* f, object_id* out_oid, int write_to_store, repository* repo)
 {
+    if (write_to_store) {
+        write_object(OBJ_BLOB, f, repo, out_oid);
+        return;
+    }
+
     char buf[4096];
     size_t size;
 
@@ -31,43 +37,7 @@ void hash_blob_from_file(FILE* f, object_id* out_oid, int write_to_store, reposi
     }
 
     sha256_final(&ctx, out_oid);
-
-    if (write_to_store && !repo->repo_dir)
-        die("Error: Cannot write object since we are not in a repository.\n");
-
-    if (!write_to_store) {
-        strbuf_free(&header);
-    }
-
-    strbuf object_path = STRBUF_INIT;
-    const char* hex = oid_tostring(out_oid);
-    char prefix[3];
-    strncpy(prefix, hex, 2);
-    prefix[2] = '\0';
-
-    // First create the subdir (first two leters of the hash.
-    strbuf_addf(&object_path, "%s/objects/%s", repo->repo_dir, prefix);
-    mkdir(object_path.buf, 0755);
-    const char* objname = hex + 2;
-    strbuf_addf(&object_path, "/%s", objname);
-
-    struct stat check;
-    if (stat(object_path.buf, &check) == 0) {
-        // skip writing an exisiting object.
-        return;
-    }
-
-    FILE* objfile = fopen(object_path.buf, "wb");
-    if (!objfile) die("Fatal: failed to create the new object.");
-    fwrite(header.buf, 1, header.len + 1, objfile);
-    fseek(f, 0, SEEK_SET);
-    while (( len = fread(buf, 1, sizeof(buf), f))) {
-        fwrite(buf, 1, len, objfile);
-    }
-
     strbuf_free(&header);
-    strbuf_free(&object_path);
-    fclose(objfile);
 }
 
 void hash_blob_from_stdin(object_id *out_oid, int write_to_store, repository *repo) {

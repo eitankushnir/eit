@@ -8,7 +8,7 @@
 int cmd_init(char** argv, int argc, repository* repo)
 {
 
-    char* check = repo->repo_dir;
+    const char* check = repo->repo_dir;
     strbuf repo_dir = STRBUF_INIT;
     strbuf object_store_path = STRBUF_INIT;
     strbuf refs_path = STRBUF_INIT;

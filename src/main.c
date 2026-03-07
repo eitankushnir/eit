@@ -8,7 +8,8 @@ static command commands[] = {
     { "init", cmd_init },
     { "config", cmd_config },
     { "hash-object", cmd_hash_object },
-    { "update-stage", cmd_update_stage }
+    { "update-stage", cmd_update_stage },
+    { "write-tree", cmd_write_tree },
 };
 
 void print_help(char* arg) {

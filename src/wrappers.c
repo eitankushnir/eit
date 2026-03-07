@@ -83,8 +83,9 @@ int removeline(int linenum, const char* path)
     file = fopen(path, "wb");
     char buf[4096];
     fseek(tempfile, 0, SEEK_SET);
-    while (fread(buf, sizeof(char), sizeof(buf), tempfile) > 0) {
-        fwrite(buf, sizeof(char), strlen(buf), file);
+    int len;
+    while (( len = fread(buf, sizeof(char), sizeof(buf), tempfile)) > 0) {
+        fwrite(buf, sizeof(char), len, file);
     }
 
     fclose(file);

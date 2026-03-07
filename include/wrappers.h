@@ -15,6 +15,5 @@ int writeline(char* buf, int linenum, const char* path);
 int removeline(int linenum, const char* path);
 int replaceline(char* buf, int linenum, const char* path);
 size_t maxlinelen(FILE* f);
-int stage_can_be_written(repository* repo);
 
 #endif

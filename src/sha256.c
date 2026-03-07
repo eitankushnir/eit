@@ -179,9 +179,8 @@ void println_oid(object_id* oid)
     printf("\n");
 }
 
-void hash_file(const char* path, object_id* out)
+void hash_file(FILE* f, object_id* out)
 {
-    FILE* f = fopen(path, "rb");
     char buf[4096];
 
     SHA256_CTX ctx;

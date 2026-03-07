@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 typedef struct {
     uint8_t data[64]; // The current 512-bit chunk.
     uint32_t datalen; // How many bytes currently in data.
@@ -23,7 +24,7 @@ void oidcpy(object_id* dest, object_id* src);
 void println_oid(object_id* oid);
 char* oid_tostring(object_id* oid);
 
-void hash_file(const char* path, object_id* out);
+void hash_file(FILE* f, object_id* out);
 void hash_stdin(object_id* out);
 
 #endif

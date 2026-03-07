@@ -3,12 +3,14 @@
 #include "repository.h"
 #include "sha256.h"
 #include "strbuf.h"
+#include "tree.h"
 #include "wrappers.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 
 void add_to_stage(const char* path, repository* repo)
 {
@@ -43,7 +45,8 @@ void add_to_stage(const char* path, repository* repo)
 
     char* oid_hex = oid_tostring(&oid);
     // TOOD: figure out modes and these merge statuses.
-    strbuf_addf(&new_entry, "100644 %s 0    %s\n", oid_hex, repo_path);
+
+    strbuf_addf(&new_entry, "%06o %s 0    %s\n", check_for_dir.st_mode, oid_hex, repo_path);
 
     // Insert new file sorted by path.
     if (index == -1) {
@@ -78,7 +81,7 @@ int index_on_stage(const char* path, repository* repo)
     strbuf stage_path = STRBUF_INIT;
     strbuf_addf(&stage_path, "%s/%s", repo->repo_dir, STAGE_DIR);
 
-    FILE* stage_file = fopen(stage_path.buf, "rb");
+    FILE* stage_file = fopen(stage_path.buf, "ab+");
     if (!stage_file)
         die("Fatal: Failed to open stage file\n");
 
@@ -116,7 +119,6 @@ void remove_from_stage(const char* path, repository* repo)
     if (index == -1)
         die("Error: %s is not on the stage\n", path);
 
-    printf("%d\n", index);
     removeline(index, stage_path.buf);
     strbuf_free(&stage_path);
 }
@@ -140,4 +142,29 @@ int stage_can_be_written(repository* repo)
 
     fclose(stage_file);
     return 1;
+}
+
+void construct_stage_tree(tree_node* out_root, repository* repo)
+{
+    strbuf stage_path = STRBUF_INIT;
+    strbuf_addf(&stage_path, "%s/%s", repo->repo_dir, STAGE_DIR);
+
+    FILE* stage_file = fopen(stage_path.buf, "rb+");
+    if (!stage_file)
+        die("Fatal: Failed to open stage file");
+
+    init_root(out_root);
+
+    size_t len = maxlinelen(stage_file);
+    fseek(stage_file, 0, SEEK_SET);
+    char* path_buf = xmalloc(len, char);
+    char* hex_buf = xmalloc(len, char);
+    mode_t mode;
+    while (1) {
+        int res = fscanf(stage_file, "%o %s %*s %s",&mode, hex_buf, path_buf);
+        if (res == EOF) break;
+
+        add_leaf(out_root, path_buf, mode, hex_buf);
+    }
+    fclose(stage_file);
 }

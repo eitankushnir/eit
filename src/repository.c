@@ -60,6 +60,11 @@ void init_current_repository_info(repository* repo)
 {
     strbuf root = STRBUF_INIT;
     char* repo_parent = find_repository_root();
+    if (!repo_parent) {
+        repo->repo_root = NULL;
+        repo->repo_dir = NULL;
+        return;
+    }
     strbuf_addf(&root, "%s/%s", repo_parent, REPO_DIR);
     repo->repo_dir = strbuf_detach(&root, 0);
     repo->repo_root = repo_parent;

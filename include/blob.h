@@ -18,4 +18,6 @@ void hash_blob_from_file(FILE* f, object_id* out_oid, int write_to_store, reposi
  */
 void hash_blob_from_stdin(object_id *out_oid, int write_to_store, repository* repo);
 
+void print_blob(const char* hex, repository* repo);
+
 #endif

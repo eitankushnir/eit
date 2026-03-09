@@ -53,3 +53,21 @@ void hash_blob_from_stdin(object_id *out_oid, int write_to_store, repository *re
     hash_blob_from_file(tmp, out_oid, write_to_store, repo);
     fclose(tmp);
 }
+
+void print_blob(const char *hex, repository *repo) {
+    object_type type = get_type(hex, repo);
+    if (type != OBJ_BLOB) die("%s is not a valid blob object\n", hex);
+
+    FILE* objfile = open_object(hex, repo);
+    if (!objfile) die("Failed to read object %s\n", hex);
+
+    // Get past the header.
+    while (fgetc(objfile) != '\0') { }
+
+    char* buf[4096];
+    int len;
+    while (( len = fread(buf, 1, sizeof(buf) - 1, objfile))) {
+        buf[len - 1] = '\0';
+        printf("%s", buf);
+    }
+}

@@ -44,6 +44,10 @@ static inline void strbuf_addstr(strbuf *sb, const char *str) {
   strbuf_add(sb, (void *)str, strlen(str));
 }
 
+static inline void strbuf_addchr(strbuf *sb, char str) {
+  strbuf_add(sb, &str, 1);
+}
+
 // Append formatted strings to the buffer.
 void strbuf_addf(strbuf *sb, const char *fmt, ...)
     __attribute__((format(printf, 2, 3)));

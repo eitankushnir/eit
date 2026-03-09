@@ -28,7 +28,7 @@ int cmd_ls_files(char** argv, int argc, repository* repo)
     extern int optind;
     struct options cmd_opts = { 0 };
 
-    while ((option_val = getopt_long(argc, argv, "cdm", opts, &opindex)) != -1) {
+    while ((option_val = getopt_long(argc, argv, "cdms", opts, &opindex)) != -1) {
         switch (option_val) {
         case 'c':
             cmd_opts.show_cached = 1;

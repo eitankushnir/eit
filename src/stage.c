@@ -282,7 +282,7 @@ void get_modified_entries(stage* out, repository* repo)
         int size_changed = (st.st_size != ent->stat_data.st_size);
 
         if (time_changed || size_changed) {
-            out->entries = xrealloc(out->entries, ++out->entry_count, stage_entry);
+            out->entries = xrealloc(out->entries, ++out->entry_count, stage_entry*);
             out->entries[out->entry_count - 1] = ent;
         }
         strbuf_free(&realpath);
@@ -305,7 +305,7 @@ void get_deleted_entries(stage *out, repository *repo) {
         }
 
         if (del) {
-            out->entries = xrealloc(out->entries, ++out->entry_count, stage_entry);
+            out->entries = xrealloc(out->entries, ++out->entry_count, stage_entry*);
             out->entries[out->entry_count - 1] = ent;
         }
 

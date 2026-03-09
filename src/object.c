@@ -4,6 +4,7 @@
 #include "sha256.h"
 #include "strbuf.h"
 #include "wrappers.h"
+#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -85,7 +86,8 @@ void write_object(object_type type, FILE* src, repository* repo, object_id* out_
     fclose(objfile);
 }
 
-FILE* open_object(const char* hex_oid, repository* repo) {
+FILE* open_object(const char* hex_oid, repository* repo)
+{
     char prefix[3];
     strncpy(prefix, hex_oid, 2);
     prefix[2] = '\0';
@@ -99,17 +101,23 @@ FILE* open_object(const char* hex_oid, repository* repo) {
     return objfile;
 }
 
-object_type get_type(const char *hex_oid, repository *repo) {
+object_type get_type(const char* hex_oid, repository* repo)
+{
     FILE* objfile = open_object(hex_oid, repo);
+    if (!objfile) {
+        printf("Failed to open: %s\n", hex_oid);
+        return OBJ_NONE;
+    }
 
     strbuf header = STRBUF_INIT;
     char c;
-    while (( c = fgetc(objfile)) != '\0') {
+    while ((c = fgetc(objfile)) != '\0') {
         strbuf_addchr(&header, c);
     }
 
-    const char* space_ptr = strchr(header.buf, '-');
-    if (!space_ptr) return OBJ_BAD;
+    const char* space_ptr = strchr(header.buf, ' ');
+    if (!space_ptr)
+        return OBJ_BAD;
 
     const int space_idx = space_ptr - header.buf;
     const char* type_name = substr(header.buf, space_idx);
@@ -120,3 +128,42 @@ object_type get_type(const char *hex_oid, repository *repo) {
     fclose(objfile);
     return type;
 }
+
+char* complete_hash_hex(const char* short_hash, repository* repo) {
+    if (strlen(short_hash) < 5) {
+        die("A short hash must be atleast 5 characters long.\n");
+    }
+
+    char* prefix = substr(short_hash, 2);
+    strbuf path = STRBUF_INIT;
+    strbuf_addf(&path, "%s/objects/%s", repo->repo_dir, prefix);
+    DIR* hash_dir = opendir(path.buf);
+
+    struct dirent* ent;
+    int len = strlen(short_hash) - 2;
+    int matches = 0;
+    strbuf match = STRBUF_INIT;
+    while (( ent = readdir(hash_dir))) {
+        char* match_try = substr(ent->d_name, len);
+        if (strcmp(match_try, short_hash + 2) == 0) {
+            strbuf_free(&match);
+            strbuf_init(&match);
+            strbuf_addf(&match, "%s%s", prefix, ent->d_name);
+            matches++;
+        }
+    }
+
+    closedir(hash_dir);
+    strbuf_free(&path);
+    free(prefix);
+
+    if (matches == 0) {
+        die("Error: %s SHA-256 short hash has not found any matches\n", short_hash);
+    }
+    if (matches > 1) {
+        die("Error: %s SHA-256 short hash is ambigious.\n", short_hash);
+    }
+    
+    return strbuf_detach(&match, 0);
+}
+

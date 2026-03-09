@@ -12,7 +12,7 @@ typedef struct {
 } SHA256_CTX;
 
 typedef struct {
-    int hash[32];
+    uint8_t hash[32];
 } object_id;
 
 

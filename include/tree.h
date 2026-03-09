@@ -3,6 +3,7 @@
 
 #include "repository.h"
 #include "sha256.h"
+#include <stdio.h>
 #include <sys/types.h>
 
 typedef struct tree_node {
@@ -19,5 +20,8 @@ void add_leaf(tree_node* root, const char* path, unsigned int mode, object_id* o
 int is_hashable(tree_node* node);
 void write_tree(tree_node* root, repository* repo);
 void free_tree(tree_node* root);
+
+void print_tree(tree_node* node, repository* repo);
+void parse_tree(const char* hex, tree_node* out_node, repository* repo);
 
 #endif

@@ -1,5 +1,6 @@
 #include "tree.h"
 #include "object.h"
+#include "repository.h"
 #include "sha256.h"
 #include "strbuf.h"
 #include "wrappers.h"
@@ -43,9 +44,7 @@ void add_leaf(tree_node *root, const char *path, unsigned int mode, object_id* o
     }
 
     int index = slashptr - path;
-    char* dirname = xmalloc(index + 1, char);
-    strncpy(dirname, path, index);
-    dirname[index] = '\0';
+    char* dirname = substr(path, index);
 
     int found_child = 0;
     for (int i = 0; i < root->child_count; i++) {
@@ -60,7 +59,7 @@ void add_leaf(tree_node *root, const char *path, unsigned int mode, object_id* o
     if (!found_child) {
         increase_array(root);
         tree_node* new_node = xmalloc(1, tree_node);
-        new_node->name = cpy(dirname);
+        new_node->name = substr(dirname, -1);
         new_node->mode = 0040000;
         new_node->parsed = 0;
         root->children[root->child_count - 1] = new_node;
@@ -87,10 +86,12 @@ static void write_node(tree_node *node, repository *repo) {
     for (int i = 0; i < node->child_count; i++) {
         tree_node* child = node->children[i];
 
-        fprintf(buffer, "%06o %s", child->mode, child->name);
-        fputc('\0', buffer);
+        fprintf(buffer, "%06o", child->mode);
+        fputc(' ', buffer);
         fwrite(child->oid.hash, sizeof(uint8_t), 32, buffer);
         fputc(' ', buffer);
+        fprintf(buffer, "%s", child->name);
+        fputc('\0', buffer);
     }
     // Hash and write object.
     write_object(OBJ_TREE, buffer, repo, &node->oid);
@@ -120,4 +121,51 @@ void free_tree(tree_node *root) {
     }
 
     free(root->children);
+}
+
+void print_tree(tree_node* node, repository* repo) {
+    if (!is_hashable(node)) die("Tree canno't be printed");
+    
+    for (int i = 0; i < node->child_count; i++) {
+        tree_node* child = node->children[i];
+        char* hex = oid_tostring(&child->oid);
+        char* type = type_name(get_type(hex, repo));
+
+        printf("%06o %s %s    %s\n", child->mode, type, hex, child->name);
+        free(hex);
+    }
+}
+
+void parse_tree(const char* hex, tree_node* out_node, repository* repo) {
+    object_type type = get_type(hex, repo);
+    if (type != OBJ_TREE) die("%s is not a valid tree object\n", hex);
+
+    FILE* objfile = open_object(hex, repo);
+    if (!objfile) die("Failed to read object %s\n", hex);
+
+    init_root(out_node);
+
+    // Get past the header.
+    while (fgetc(objfile) != '\0') { }
+
+    while (1) {
+        tree_node* child = xmalloc(1, tree_node);
+        int res = fscanf(objfile, "%o", &child->mode);
+        if (res != 1) {
+            free(child);
+            break;
+        }
+        char a = fgetc(objfile);
+        fread(child->oid.hash, sizeof(uint8_t), 32, objfile);
+        char b = fgetc(objfile); //the space;
+        strbuf name = STRBUF_INIT;
+        char c;
+        while (( c = fgetc(objfile)) != '\0') {
+            strbuf_addchr(&name, c);
+        }
+        child->name = strbuf_detach(&name, 0);
+        child->parsed = 1;
+        out_node->child_count++;
+        out_node->children[out_node->child_count - 1] = child;
+    }
 }

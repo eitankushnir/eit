@@ -3,9 +3,11 @@
 
 #define REPO_DIR ".eit"
 
-typedef struct {
+typedef struct repository {
     const char* repo_root; // path to the parent of .eit folder.
     const char* repo_dir; // path to the .eit folder.
+
+    struct stage* stage;
 } repository;
 
 // Find the root of the current repository and return the absolute path to it.

@@ -4,6 +4,7 @@
 #include "strbuf.h"
 #include "wrappers.h"
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,9 +13,9 @@
 void init_root(tree_node *node) {
     node->name = NULL;
     node->children = xmalloc(1, tree_node);
-    node->hex_oid = NULL;
     node->mode = 0;
     node->child_count = 0;
+    node->parsed = 0;
 }
 
 static void increase_array(tree_node* node) {
@@ -28,14 +29,15 @@ static char* cpy(const char* src) {
     return copy;
 }
 
-void add_leaf(tree_node *root, const char *path, mode_t mode, const char *hex_oid) {
+void add_leaf(tree_node *root, const char *path, unsigned int mode, object_id* oid) {
     char* slashptr = strchr(path, '/');
     if (!slashptr) {
         increase_array(root);
         tree_node* new_node = xmalloc(1, tree_node);
         new_node->name = cpy(path);
-        new_node->hex_oid = cpy(hex_oid);
+        oidcpy(&new_node->oid, oid);
         new_node->mode = mode;
+        new_node->parsed = 1;
         root->children[root->child_count - 1] = new_node;
         return;
     }
@@ -48,28 +50,30 @@ void add_leaf(tree_node *root, const char *path, mode_t mode, const char *hex_oi
     int found_child = 0;
     for (int i = 0; i < root->child_count; i++) {
         if (strcmp(dirname, root->children[i]->name) == 0) {
-            add_leaf(root->children[i], path + index + 1, mode, hex_oid);
+            // Go into the directory.
+            add_leaf(root->children[i], path + index + 1, mode, oid);
             found_child = 1;
         }
     }
 
+    // Create a child for the directory.
     if (!found_child) {
         increase_array(root);
         tree_node* new_node = xmalloc(1, tree_node);
         new_node->name = cpy(dirname);
-        new_node->hex_oid = NULL;
-        struct stat st;
-        stat(dirname, &st);
-        new_node->mode = st.st_mode;
+        new_node->mode = 0040000;
+        new_node->parsed = 0;
         root->children[root->child_count - 1] = new_node;
-        add_leaf(root->children[root->child_count - 1], path + index + 1, mode, hex_oid);
+        
+        // Go into the newly created directory.
+        add_leaf(root->children[root->child_count - 1], path + index + 1, mode, oid);
     }
 }
 
 int is_hashable(tree_node *node) {
     for (int i = 0; i < node->child_count; i++) {
         tree_node* child = node->children[i];
-        if (!child->hex_oid || !child->mode || !child->name) return 0;
+        if (!child->parsed) return 0;
     }
 
     return 1;
@@ -82,17 +86,14 @@ static void write_node(tree_node *node, repository *repo) {
     // Get the size of the list.
     for (int i = 0; i < node->child_count; i++) {
         tree_node* child = node->children[i];
-        object_type type;
-        if (child->child_count != 0) type = OBJ_TREE;
-        else type = OBJ_BLOB;
 
-        fprintf(buffer, "%06o %s %s %s\n", child->mode, type_name(type), child->hex_oid, child->name);
+        fprintf(buffer, "%06o %s", child->mode, child->name);
+        fputc('\0', buffer);
+        fwrite(child->oid.hash, sizeof(uint8_t), 32, buffer);
+        fputc(' ', buffer);
     }
     // Hash and write object.
-    object_id oid;
-
-    write_object(OBJ_TREE, buffer, repo, &oid);
-    node->hex_oid = oid_tostring(&oid);
+    write_object(OBJ_TREE, buffer, repo, &node->oid);
 }
 
 void write_tree(tree_node *root, repository *repo) {
@@ -104,6 +105,7 @@ void write_tree(tree_node *root, repository *repo) {
     for (int i = 0; i < root->child_count; i++) {
         tree_node* child = root->children[i];
         if (child->child_count != 0) write_tree(child, repo);
+        child->parsed = 1;
     }
 
     if (!is_hashable(root)) die("Something went wrong when writing the tree");
@@ -112,7 +114,6 @@ void write_tree(tree_node *root, repository *repo) {
 
 void free_tree(tree_node *root) {
     if (root->name) free(root->name);
-    if (root->hex_oid) free(root->hex_oid);
 
     for (int i = 0; i < root->child_count; i++) {
         free_tree(root->children[i]);

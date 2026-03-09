@@ -113,12 +113,12 @@ static int read_entry(struct stage_entry* ent, FILE* f)
     ent->path = xmalloc(1, char);
     ent->path[0] = '\0';
 
-    fgetc(f); // get the space
+    //fgetc(f); // get the space
     fread(ent->oid.hash, sizeof(uint8_t), 32, f);
-    fgetc(f); // get the space again.
+    // fgetc(f); // get the space again.
     fscanf(f, "%u", &flags);
     ent->flags = ntohl(flags);
-    char c;
+    char c = fgetc(f);
     while ((c = fgetc(f)) != '\0') {
         ent->path = realloc(ent->path, ++ent->path_len);
         ent->path[ent->path_len - 1] = c;

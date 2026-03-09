@@ -84,7 +84,7 @@ int removeline(int linenum, const char* path)
     char buf[4096];
     fseek(tempfile, 0, SEEK_SET);
     int len;
-    while (( len = fread(buf, sizeof(char), sizeof(buf), tempfile)) > 0) {
+    while ((len = fread(buf, sizeof(char), sizeof(buf), tempfile)) > 0) {
         fwrite(buf, sizeof(char), len, file);
     }
 
@@ -147,4 +147,27 @@ size_t maxlinelen(FILE* f)
             largest = current;
     }
     return largest;
+}
+
+int non_opt_count(char** argv, int argc)
+{
+    int c = 0;
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] != '-')
+            c++;
+    }
+
+    return c;
+}
+
+char* substr(const char* str, int count)
+{
+    char* buf;
+    if (count == -1)
+        count = strlen(str);
+
+    buf = xmalloc(count + 1, char);
+    strncpy(buf, str, count);
+    buf[count] = '\0';
+    return buf;
 }

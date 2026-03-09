@@ -11,6 +11,8 @@ static command commands[] = {
     { "update-stage", cmd_update_stage },
     { "write-tree", cmd_write_tree },
     { "cat-file", cmd_cat_file },
+    { "ls-files", cmd_ls_files },
+
 };
 
 void print_help(char* arg) {

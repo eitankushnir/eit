@@ -265,6 +265,7 @@ void get_modified_entries(stage* out, repository* repo)
 {
     stage* s = repo->stage;
     out->entry_count = 0;
+    out->entries = NULL;
 
     for (int i = 0; i < s->entry_count; i++) {
         strbuf realpath = STRBUF_INIT;
@@ -292,6 +293,7 @@ void get_modified_entries(stage* out, repository* repo)
 void get_deleted_entries(stage *out, repository *repo) {
     stage* s = repo->stage;
     out->entry_count = 0;
+    out->entries = NULL;
 
     for (int i = 0; i < s->entry_count; i++) {
         strbuf realpath = STRBUF_INIT;

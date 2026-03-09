@@ -15,5 +15,6 @@ int cmd_config(char** argv, int argc, repository* repo);
 int cmd_hash_object(char** argv, int argc, repository* repo);
 int cmd_update_stage(char** argv, int argc, repository* repo);
 int cmd_write_tree(char** argv, int argc, repository* repo);
+int cmd_cat_file(char** argv, int argc, repository* repo);
 
 #endif

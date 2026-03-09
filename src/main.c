@@ -10,6 +10,7 @@ static command commands[] = {
     { "hash-object", cmd_hash_object },
     { "update-stage", cmd_update_stage },
     { "write-tree", cmd_write_tree },
+    { "cat-file", cmd_cat_file },
 };
 
 void print_help(char* arg) {

@@ -1,9 +1,11 @@
 #include "object.h"
 #include "common.h"
+#include "repository.h"
 #include "sha256.h"
 #include "strbuf.h"
 #include "wrappers.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 
@@ -22,7 +24,7 @@ object_type type_from_name(char* name)
         }
     }
 
-    die("Invalid type name: %s", name);
+    return OBJ_BAD;
 }
 
 void write_object(object_type type, FILE* src, repository* repo, object_id* out_oid)
@@ -81,4 +83,40 @@ void write_object(object_type type, FILE* src, repository* repo, object_id* out_
     strbuf_free(&header);
     strbuf_free(&object_path);
     fclose(objfile);
+}
+
+FILE* open_object(const char* hex_oid, repository* repo) {
+    char prefix[3];
+    strncpy(prefix, hex_oid, 2);
+    prefix[2] = '\0';
+    char* objfile_name = hex_oid + 2;
+
+    strbuf objfile_path = STRBUF_INIT;
+    strbuf_addf(&objfile_path, "%s/objects/%s/%s", repo->repo_dir, prefix, objfile_name);
+
+    FILE* objfile = fopen(objfile_path.buf, "rb");
+    strbuf_free(&objfile_path);
+    return objfile;
+}
+
+object_type get_type(const char *hex_oid, repository *repo) {
+    FILE* objfile = open_object(hex_oid, repo);
+
+    strbuf header = STRBUF_INIT;
+    char c;
+    while (( c = fgetc(objfile)) != '\0') {
+        strbuf_addchr(&header, c);
+    }
+
+    const char* space_ptr = strchr(header.buf, '-');
+    if (!space_ptr) return OBJ_BAD;
+
+    const int space_idx = space_ptr - header.buf;
+    const char* type_name = substr(header.buf, space_idx);
+
+    object_type type = type_from_name(type_name);
+    free(type_name);
+    strbuf_free(&header);
+    fclose(objfile);
+    return type;
 }

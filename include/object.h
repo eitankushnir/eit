@@ -7,6 +7,7 @@
 #include <stdlib.h>
 
 typedef enum {
+    OBJ_BAD = -1,
     OBJ_NONE = 0,
     OBJ_BLOB = 1,
     OBJ_TREE = 2,
@@ -29,5 +30,7 @@ const char* type_name(object_type type);
 object_type type_from_name(char* name);
 
 void write_object(object_type type, FILE* src, repository* repo, object_id* out_oid);
+FILE* open_object(const char* hex_oid, repository* repo);
+object_type get_type(const char* hex_oid, repository* repo);
 
 #endif

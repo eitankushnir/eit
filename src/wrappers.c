@@ -16,6 +16,15 @@ void* _xmalloc(size_t bytes, int n)
     return ptr;
 }
 
+void* _xrealloc(void* ptr, size_t bytes, int n) {
+    void* new_ptr = realloc(ptr, n * bytes);
+    if (new_ptr == NULL) {
+        die("Fatal: Failed to reallocate memory.\n");
+    }
+
+    return new_ptr;
+}
+
 void die(char* fmt, ...)
 {
     va_list ap;

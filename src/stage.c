@@ -6,6 +6,8 @@
 #include "tree.h"
 #include "wrappers.h"
 #include <arpa/inet.h>
+#include <asm-generic/errno-base.h>
+#include <errno.h>
 #include <netinet/in.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -113,7 +115,7 @@ static int read_entry(struct stage_entry* ent, FILE* f)
     ent->path = xmalloc(1, char);
     ent->path[0] = '\0';
 
-    //fgetc(f); // get the space
+    // fgetc(f); // get the space
     fread(ent->oid.hash, sizeof(uint8_t), 32, f);
     // fgetc(f); // get the space again.
     fscanf(f, "%u", &flags);
@@ -256,5 +258,57 @@ void construct_stage_tree(struct tree_node* out_root, stage* stage)
     for (int i = 0; i < stage->entry_count; i++) {
         stage_entry* ent = stage->entries[i];
         add_leaf(out_root, ent->path, ent->mode, &ent->oid);
+    }
+}
+
+void get_modified_entries(stage* out, repository* repo)
+{
+    stage* s = repo->stage;
+    out->entry_count = 0;
+
+    for (int i = 0; i < s->entry_count; i++) {
+        strbuf realpath = STRBUF_INIT;
+        stage_entry* ent = s->entries[i];
+        strbuf_addf(&realpath, "%s/%s", repo->repo_root, ent->path);
+
+        struct stat st;
+        if (lstat(realpath.buf, &st) != 0) {
+            strbuf_free(&realpath);
+            continue;
+        }
+
+        int time_changed = (st.st_mtim.tv_sec != ent->stat_data.st_mtim.tv_sec) ||
+                            (st.st_mtim.tv_nsec != ent->stat_data.st_mtim.tv_nsec);
+        int size_changed = (st.st_size != ent->stat_data.st_size);
+
+        if (time_changed || size_changed) {
+            out->entries = xrealloc(out->entries, ++out->entry_count, stage_entry);
+            out->entries[out->entry_count - 1] = ent;
+        }
+        strbuf_free(&realpath);
+    }
+}
+
+void get_deleted_entries(stage *out, repository *repo) {
+    stage* s = repo->stage;
+    out->entry_count = 0;
+
+    for (int i = 0; i < s->entry_count; i++) {
+        strbuf realpath = STRBUF_INIT;
+        stage_entry* ent = s->entries[i];
+        strbuf_addf(&realpath, "%s/%s", repo->repo_root, ent->path);
+
+        struct stat st;
+        int del = 0;
+        if (lstat(realpath.buf, &st) != 0) {
+            if (errno == ENOENT) del = 1;
+        }
+
+        if (del) {
+            out->entries = xrealloc(out->entries, ++out->entry_count, stage_entry);
+            out->entries[out->entry_count - 1] = ent;
+        }
+
+        strbuf_free(&realpath);
     }
 }

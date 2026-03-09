@@ -48,4 +48,7 @@ int stage_can_be_written(stage* stage);
 
 void construct_stage_tree(struct tree_node* out_root, stage* stage);
 
+void get_modified_entries(stage* out, repository* repo);
+void get_deleted_entries(stage* out, repository* repo);
+
 #endif

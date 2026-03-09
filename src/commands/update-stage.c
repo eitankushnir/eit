@@ -1,7 +1,6 @@
 #include "commands.h"
 #include "repository.h"
 #include "stage.h"
-#include "tree.h"
 #include <getopt.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -48,8 +47,7 @@ int cmd_update_stage(char** argv, int argc, repository* repo)
         struct stat st;
         if (stat(path, &st) != 0) {
             if (!cmd_opts.remove) {
-                fprintf(stderr, "Warning: failed to stat %s -- ignoring\n", path);
-                fprintf(stderr, "         If meant to be removed, run with --remove\n");
+                fprintf(stderr, "Warning: failed to stat %s -- ignoring. If meant to be removed, run with --remove.\n", path);
             }
             else {
                 printf("%s was found on stage but is missing -- removing\n", path);
@@ -82,5 +80,7 @@ int cmd_update_stage(char** argv, int argc, repository* repo)
         }
         add_to_stage(path, repo);
     }
+
+    write_stage(repo);
     return 0;
 }

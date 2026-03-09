@@ -5,28 +5,157 @@
 #include "strbuf.h"
 #include "tree.h"
 #include "wrappers.h"
+#include <arpa/inet.h>
+#include <netinet/in.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
-void add_to_stage(const char* path, repository* repo)
+static int normalize_mode(uint32_t st_mode)
 {
-    strbuf stage_path = STRBUF_INIT;
-    strbuf_addf(&stage_path, "%s/%s", repo->repo_dir, STAGE_DIR);
-    FILE* create_stage = fopen(stage_path.buf, "a");
-    if (!create_stage)
-        die("Failed to open stage file\n");
-    fclose(create_stage);
+    if (S_ISLNK(st_mode))
+        return 0120000;
 
-    struct stat check_for_dir;
-    if (stat(path, &check_for_dir) != 0) {
+    if (S_ISREG(st_mode)) {
+        if (st_mode & 0111) {
+            return 0100755; // exe
+        } else {
+            return 0100644; // normal file
+        }
+    }
+
+    return 0;
+}
+
+static int write_stage_entry(struct stage_entry* ent, FILE* f)
+{
+    uint32_t ctime_sec = htonl(ent->stat_data.st_ctim.tv_sec);
+    uint32_t ctime_nsec = htonl(ent->stat_data.st_ctim.tv_nsec);
+    uint32_t mtime_sec = htonl(ent->stat_data.st_mtim.tv_sec);
+    uint32_t mtime_nsec = htonl(ent->stat_data.st_mtim.tv_nsec);
+    uint32_t dev = htonl(ent->stat_data.st_dev);
+    uint32_t ino = htonl(ent->stat_data.st_ino);
+    uint32_t mode = htonl(ent->mode);
+    uint32_t uid = htonl(ent->stat_data.st_uid);
+    uint32_t gid = htonl(ent->stat_data.st_gid);
+    uint32_t size = htonl(ent->stat_data.st_size);
+    uint32_t flags = htonl(ent->flags);
+
+    fprintf(f, "%u %u %u %u %u %u %u %u %u %u ",
+        ctime_sec, ctime_nsec, mtime_sec, mtime_nsec, dev, ino,
+        mode, uid, gid, size);
+
+    fwrite(ent->oid.hash, sizeof(uint8_t), 32, f);
+    fputc(' ', f);
+
+    fprintf(f, "%u", flags);
+    fputc(' ', f);
+    fprintf(f, "%s", ent->path);
+    fputc('\0', f);
+    return 0;
+}
+
+static FILE* open_stage(struct repository* repo, char* mode)
+{
+    strbuf path = STRBUF_INIT;
+    strbuf_addf(&path, "%s/%s", repo->repo_dir, STAGE_DIR);
+    FILE* stagefile = fopen(path.buf, mode);
+    strbuf_free(&path);
+    return stagefile;
+}
+
+int write_stage(struct repository* repo)
+{
+    FILE* stage_file = open_stage(repo, "wb+");
+    for (int i = 0; i < repo->stage->entry_count; i++) {
+        write_stage_entry(repo->stage->entries[i], stage_file);
+    }
+    fclose(stage_file);
+}
+
+static int read_entry(struct stage_entry* ent, FILE* f)
+{
+    uint32_t ctime_sec;
+    uint32_t ctime_nsec;
+    uint32_t mtime_sec;
+    uint32_t mtime_nsec;
+    uint32_t dev;
+    uint32_t ino;
+    uint32_t mode;
+    uint32_t uid;
+    uint32_t gid;
+    uint32_t size;
+    uint32_t flags;
+
+    if (fscanf(f, "%u %u %u %u %u %u %u %u %u %u ",
+            &ctime_sec, &ctime_nsec, &mtime_sec, &mtime_nsec, &dev, &ino,
+            &mode, &uid, &gid, &size)
+        != 10) {
+        return -1;
+    }
+
+    ent->stat_data.st_ctim.tv_sec = ntohl(ctime_sec);
+    ent->stat_data.st_ctim.tv_nsec = ntohl(ctime_nsec);
+    ent->stat_data.st_mtim.tv_sec = ntohl(mtime_sec);
+    ent->stat_data.st_mtim.tv_nsec = ntohl(mtime_nsec);
+    ent->stat_data.st_dev = ntohl(dev);
+    ent->stat_data.st_ino = ntohl(ino);
+    ent->mode = ntohl(mode);
+    ent->stat_data.st_uid = ntohl(uid);
+    ent->stat_data.st_gid = ntohl(gid);
+    ent->stat_data.st_size = ntohl(size);
+
+    ent->path_len = 0;
+    ent->path = xmalloc(1, char);
+    ent->path[0] = '\0';
+
+    fgetc(f); // get the space
+    fread(ent->oid.hash, sizeof(uint8_t), 32, f);
+    fgetc(f); // get the space again.
+    fscanf(f, "%u", &flags);
+    ent->flags = ntohl(flags);
+    char c;
+    while ((c = fgetc(f)) != '\0') {
+        ent->path = realloc(ent->path, ++ent->path_len);
+        ent->path[ent->path_len - 1] = c;
+    }
+    ent->path[ent->path_len] = '\0';
+
+    return 0;
+}
+
+int load_stage(struct repository* repo)
+{
+    struct stage* out = repo->stage;
+    out->entry_count = 0;
+    out->entries = NULL;
+    FILE* stage_file = open_stage(repo, "rb");
+    if (!stage_file)
+        return 1;
+
+    stage_entry* ent = xmalloc(1, stage_entry);
+    while (read_entry(ent, stage_file) == 0) {
+        out->entries = realloc(out->entries, ++out->entry_count);
+        out->entries[out->entry_count - 1] = ent;
+        ent = xmalloc(1, stage_entry);
+    }
+
+    free(ent); // free the last allocation.
+    return 0;
+}
+
+void add_to_stage(const char* path, struct repository* repo)
+{
+    struct stat st;
+    if (lstat(path, &st) != 0) {
         perror("Failed to stat");
         die("");
     }
-    if (S_ISDIR(check_for_dir.st_mode)) {
+    if (S_ISDIR(st.st_mode)) {
         die("Error: Cannot add %s to the stage since it is a directory\n", path);
     }
 
@@ -34,7 +163,6 @@ void add_to_stage(const char* path, repository* repo)
 
     int index = index_on_stage(path, repo);
 
-    strbuf new_entry = STRBUF_INIT;
     FILE* file_to_add = fopen(path, "rb");
     if (!file_to_add)
         die("Fatal: failed to open file for addition");
@@ -43,128 +171,90 @@ void add_to_stage(const char* path, repository* repo)
     hash_blob_from_file(file_to_add, &oid, 1, repo);
     fclose(file_to_add);
 
-    char* oid_hex = oid_tostring(&oid);
-    // TOOD: figure out modes and these merge statuses.
-
-    strbuf_addf(&new_entry, "%06o %s 0    %s\n", check_for_dir.st_mode, oid_hex, repo_path);
+    // TOOD: figure out these merge statuses.
 
     // Insert new file sorted by path.
-    if (index == -1) {
-        FILE* stage_file = fopen(stage_path.buf, "rb+");
-        if (!stage_file)
-            die("Fatal: Failed to open stage file");
 
-        size_t len = maxlinelen(stage_file);
-        fseek(stage_file, 0, SEEK_SET);
-        char* path_buf = xmalloc(len, char);
-        int line_count = 0;
-        while (1) {
-            int res = fscanf(stage_file, "%*s %*s %*s %s", path_buf);
-            if (res == EOF || strcmp(path_buf, repo_path) > 0) {
-                writeline(new_entry.buf, line_count, stage_path.buf);
+    stage_entry* new_entry;
+    if (index == -1) {
+        new_entry = xmalloc(1, stage_entry);
+        repo->stage->entries = realloc(repo->stage->entries, ++repo->stage->entry_count * sizeof(stage_entry*));
+        int new_index = 0;
+        for (int i = 0; i < repo->stage->entry_count - 1; i++) {
+            stage_entry* ent = repo->stage->entries[i];
+            if (strcmp(repo_path, ent->path) < 0)
                 break;
-            }
-            line_count++;
+            new_index++;
         }
-        fclose(stage_file);
+
+        for (int i = repo->stage->entry_count - 1; i > new_index; i--) {
+            repo->stage->entries[i] = repo->stage->entries[i - 1];
+        }
+        repo->stage->entries[new_index] = new_entry;
     } else {
-        replaceline(new_entry.buf, index, stage_path.buf);
+        new_entry = repo->stage->entries[index];
+        free(new_entry->path);
     }
 
-    strbuf_free(&new_entry);
-    strbuf_free(&stage_path);
-    free(repo_path);
+    new_entry->path = repo_path;
+    new_entry->path_len = strlen(repo_path);
+    new_entry->stat_data = st;
+    new_entry->flags = 0;
+    new_entry->mode = normalize_mode(st.st_mode);
+    oidcpy(&new_entry->oid, &oid);
 }
 
-int index_on_stage(const char* path, repository* repo)
+int index_on_stage(const char* path, struct repository* repo)
 {
-    strbuf stage_path = STRBUF_INIT;
-    strbuf_addf(&stage_path, "%s/%s", repo->repo_dir, STAGE_DIR);
-
-    FILE* stage_file = fopen(stage_path.buf, "ab+");
-    if (!stage_file)
-        die("Fatal: Failed to open stage file\n");
-
     char* repo_path = path_in_repo(path, repo);
-    char* buf = xmalloc(strlen(repo_path) + 1, char);
-
-    int line_count = 0;
-    while (fscanf(stage_file, "%*s %*s %*s %s", buf) != EOF) {
-        if (strcmp(repo_path, buf) == 0) {
+    for (int i = 0; i < repo->stage->entry_count; i++) {
+        if (strcmp(path, repo->stage->entries[i]->path) == 0) {
             free(repo_path);
-            free(buf);
-            fclose(stage_file);
-            return line_count;
+            return i;
         }
-        line_count++;
     }
 
     free(repo_path);
-    free(buf);
-    fclose(stage_file);
     return -1;
 }
 
-int is_on_stage(const char* path, repository* repo)
+int is_on_stage(const char* path, struct repository* repo)
 {
     return index_on_stage(path, repo) != -1;
 }
 
-void remove_from_stage(const char* path, repository* repo)
+void remove_from_stage(const char* path, struct repository* repo)
 {
-    strbuf stage_path = STRBUF_INIT;
-    strbuf_addf(&stage_path, "%s/%s", repo->repo_dir, STAGE_DIR);
-
     int index = index_on_stage(path, repo);
     if (index == -1)
-        die("Error: %s is not on the stage\n", path);
+        return;
 
-    removeline(index, stage_path.buf);
-    strbuf_free(&stage_path);
+    stage_entry* to_remove = repo->stage->entries[index];
+    for (int i = index; i < repo->stage->entry_count - 1; i++) {
+        repo->stage->entries[i] = repo->stage->entries[i + 1];
+    }
+    repo->stage->entry_count--;
+
+    free(to_remove->path);
+    free(to_remove);
 }
 
-int stage_can_be_written(repository* repo)
+int stage_can_be_written(stage* stage)
 {
-    strbuf stage_path = STRBUF_INIT;
-    strbuf_addf(&stage_path, "%s/%s", repo->repo_dir, STAGE_DIR);
-
-    FILE* stage_file = fopen(stage_path.buf, "rb");
-    if (!stage_file)
-        die("Fatal: Failed to open stage file\n");
-
-    int state;
-    while (fscanf(stage_file, "%*s %*s %d %*s", &state) != EOF) {
-        if (state != 0) {
-            fclose(stage_file);
+    for (int i = 0; i < stage->entry_count; i++) {
+        if (stage->entries[i]->flags & 0b11)
             return 0;
-        }
     }
 
-    fclose(stage_file);
     return 1;
 }
 
-void construct_stage_tree(tree_node* out_root, repository* repo)
+void construct_stage_tree(struct tree_node* out_root, stage* stage)
 {
-    strbuf stage_path = STRBUF_INIT;
-    strbuf_addf(&stage_path, "%s/%s", repo->repo_dir, STAGE_DIR);
-
-    FILE* stage_file = fopen(stage_path.buf, "rb+");
-    if (!stage_file)
-        die("Fatal: Failed to open stage file");
-
     init_root(out_root);
 
-    size_t len = maxlinelen(stage_file);
-    fseek(stage_file, 0, SEEK_SET);
-    char* path_buf = xmalloc(len, char);
-    char* hex_buf = xmalloc(len, char);
-    mode_t mode;
-    while (1) {
-        int res = fscanf(stage_file, "%o %s %*s %s",&mode, hex_buf, path_buf);
-        if (res == EOF) break;
-
-        add_leaf(out_root, path_buf, mode, hex_buf);
+    for (int i = 0; i < stage->entry_count; i++) {
+        stage_entry* ent = stage->entries[i];
+        add_leaf(out_root, ent->path, ent->mode, &ent->oid);
     }
-    fclose(stage_file);
 }

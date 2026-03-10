@@ -1,8 +1,10 @@
 #include "sha256.h"
 #include "strbuf.h"
+#include "wrappers.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 // BITWISE MACROS
@@ -215,4 +217,26 @@ char* oid_tostring(object_id* oid)
         strbuf_addf(&str, "%02x", oid->hash[i]); 
     }
     return strbuf_detach(&str, 0);
+}
+
+static int hex_char_to_int(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    
+    die("Invalid hex char: %c\n", c);
+    return -1;
+}
+
+void oid_from_hex(object_id *out, const char *hex) {
+    if (!hex || strlen(hex) != 64) {
+        die("Invalid hex %s\n", hex);
+    }
+
+    for (int i = 0; i < 32; i++) {
+        int high = hex_char_to_int(hex[i * 2]);
+        int low = hex_char_to_int(hex[i * 2 + 1]);
+
+        out->hash[i] = (uint8_t)((high << 4) | low);
+    }
 }

@@ -23,6 +23,7 @@ void sha256_final(SHA256_CTX *ctx, object_id* out);
 void oidcpy(object_id* dest, object_id* src);
 void println_oid(object_id* oid);
 char* oid_tostring(object_id* oid);
+void oid_from_hex(object_id* out, const char* hex);
 
 void hash_file(FILE* f, object_id* out);
 void hash_stdin(object_id* out);

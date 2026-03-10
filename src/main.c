@@ -12,7 +12,7 @@ static command commands[] = {
     { "write-tree", cmd_write_tree },
     { "cat-file", cmd_cat_file },
     { "ls-files", cmd_ls_files },
-
+    {"commit-tree", cmd_commit_tree},
 };
 
 void print_help(char* arg) {

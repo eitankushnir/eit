@@ -67,23 +67,21 @@ void write_object(object_type type, FILE* src, repository* repo, object_id* out_
     strbuf_addf(&object_path, "/%s", objname);
 
     struct stat check;
-    if (stat(object_path.buf, &check) == 0) {
-        // skip writing an exisiting object.
-        return;
-    }
-
-    FILE* objfile = fopen(object_path.buf, "wb");
-    if (!objfile)
-        die("Fatal: failed to create the new object.");
-    fwrite(header.buf, 1, header.len + 1, objfile);
-    fseek(src, 0, SEEK_SET);
-    while ((len = fread(buf, 1, sizeof(buf), src))) {
-        fwrite(buf, 1, len, objfile);
+    // skip writing an exisiting object.
+    if (stat(object_path.buf, &check) != 0) {
+        FILE* objfile = fopen(object_path.buf, "wb");
+        if (!objfile)
+            die("Fatal: failed to create the new object.");
+        fwrite(header.buf, 1, header.len + 1, objfile);
+        fseek(src, 0, SEEK_SET);
+        while ((len = fread(buf, 1, sizeof(buf), src))) {
+            fwrite(buf, 1, len, objfile);
+        }
+        fclose(objfile);
     }
 
     strbuf_free(&header);
     strbuf_free(&object_path);
-    fclose(objfile);
 }
 
 FILE* open_object(const char* hex_oid, repository* repo)
@@ -129,21 +127,25 @@ object_type get_type(const char* hex_oid, repository* repo)
     return type;
 }
 
-char* complete_hash_hex(const char* short_hash, repository* repo) {
-    if (strlen(short_hash) < 5) {
-        die("A short hash must be atleast 5 characters long.\n");
+char* complete_hash_hex(const char* short_hash, repository* repo)
+{
+    if (strlen(short_hash) < 4) {
+        die("A short hash must be atleast 4 characters long.\n");
     }
 
     char* prefix = substr(short_hash, 2);
     strbuf path = STRBUF_INIT;
     strbuf_addf(&path, "%s/objects/%s", repo->repo_dir, prefix);
     DIR* hash_dir = opendir(path.buf);
+    if (!hash_dir) {
+        die("Error: %s SHA-256 short hash has not found any matches\n", short_hash);
+    }
 
     struct dirent* ent;
     int len = strlen(short_hash) - 2;
     int matches = 0;
     strbuf match = STRBUF_INIT;
-    while (( ent = readdir(hash_dir))) {
+    while ((ent = readdir(hash_dir))) {
         char* match_try = substr(ent->d_name, len);
         if (strcmp(match_try, short_hash + 2) == 0) {
             strbuf_free(&match);
@@ -163,7 +165,6 @@ char* complete_hash_hex(const char* short_hash, repository* repo) {
     if (matches > 1) {
         die("Error: %s SHA-256 short hash is ambigious.\n", short_hash);
     }
-    
+
     return strbuf_detach(&match, 0);
 }
-

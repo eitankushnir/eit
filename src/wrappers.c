@@ -158,10 +158,10 @@ size_t maxlinelen(FILE* f)
     return largest;
 }
 
-int non_opt_count(char** argv, int argc)
+int non_opt_count(char** argv, int argc, int optind)
 {
     int c = 0;
-    for (int i = 1; i < argc; i++) {
+    for (int i = optind; i < argc; i++) {
         if (argv[i][0] != '-')
             c++;
     }

@@ -18,7 +18,7 @@ int removeline(int linenum, const char* path);
 int replaceline(char* buf, int linenum, const char* path);
 size_t maxlinelen(FILE* f);
 
-int non_opt_count(char** argv, int argc);
+int non_opt_count(char** argv, int argc, int optind);
 char* substr(const char* str, int count);
 
 #endif

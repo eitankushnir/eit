@@ -17,5 +17,6 @@ int cmd_update_stage(char** argv, int argc, repository* repo);
 int cmd_write_tree(char** argv, int argc, repository* repo);
 int cmd_cat_file(char** argv, int argc, repository* repo);
 int cmd_ls_files(char** argv, int argc, repository* repo);
+int cmd_commit_tree(char** argv, int argc, repository* repo);
 
 #endif

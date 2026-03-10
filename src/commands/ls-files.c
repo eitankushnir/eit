@@ -48,7 +48,7 @@ int cmd_ls_files(char** argv, int argc, repository* repo)
     }
 
     if (!cmd_opts.show_del && !cmd_opts.show_mod) cmd_opts.show_cached = 1;
-    argc = non_opt_count(argv, argc);
+    argc = non_opt_count(argv, argc, optind);
     if (argc != 0) {
         fprintf(stderr, "Warning: Ingnoring all other non-option arguments\n");
     }

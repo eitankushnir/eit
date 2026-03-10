@@ -1,5 +1,6 @@
 #include "blob.h"
 #include "commands.h"
+#include "commit.h"
 #include "object.h"
 #include "strbuf.h"
 #include "tree.h"
@@ -43,7 +44,7 @@ int cmd_cat_file(char** argv, int argc, repository* repo)
             return 1;
         }
     }
-    argc = non_opt_count(argv, argc);
+    argc = non_opt_count(argv, argc, optind);
     if (argc < 1) {
         fprintf(stderr, "Error: Not enough arguments\n");
         return 1;
@@ -61,7 +62,7 @@ int cmd_cat_file(char** argv, int argc, repository* repo)
     } else {
         hex = argv[optind];
     }
-    
+
     int free_short_hash = 0;
     if (strlen(hex) > 64) {
         die("Error: a SHA-256 hash cannot extends 64 characters.\n");
@@ -76,7 +77,8 @@ int cmd_cat_file(char** argv, int argc, repository* repo)
     }
 
     FILE* objfile = open_object(hex, repo);
-    if (!objfile) die("Failed to read object with hash: %s\n", hex);
+    if (!objfile)
+        die("Failed to read object with hash: %s\n", hex);
     strbuf header = STRBUF_INIT;
     char c;
     while ((c = fgetc(objfile)) != '\0') {
@@ -97,6 +99,7 @@ int cmd_cat_file(char** argv, int argc, repository* repo)
     if (cmd_opts.pretty_print) {
         object_type type = get_type(hex, repo);
         tree_node node;
+        commit c;
         switch (type) {
         case OBJ_TREE:
             parse_tree(hex, &node, repo);
@@ -106,11 +109,17 @@ int cmd_cat_file(char** argv, int argc, repository* repo)
         case OBJ_BLOB:
             print_blob(hex, repo);
             break;
+        case OBJ_COMMIT:
+            parse_commit(hex, &c, repo);
+            print_commit(&c);
+            free_commit(&c);
+            break;
         default:
             die("%s is not a valid object hash\n", hex);
         }
     }
     strbuf_free(&header);
-    if (free_short_hash) free(hex);
+    if (free_short_hash)
+        free(hex);
     return 0;
 }

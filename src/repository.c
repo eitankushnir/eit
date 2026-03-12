@@ -1,4 +1,5 @@
 #include "repository.h"
+#include "head.h"
 #include "stage.h"
 #include "strbuf.h"
 #include "wrappers.h"
@@ -73,6 +74,9 @@ void init_current_repository_info(repository* repo)
     repo->repo_root = repo_parent;
     repo->stage = xmalloc(1, stage);
     load_stage(repo);
+
+    repo->head = xmalloc(1, head);
+    parse_head(repo->head, repo);
 }
 
 char* path_in_repo(const char* path, repository* repo)

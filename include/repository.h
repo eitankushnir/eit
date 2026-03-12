@@ -8,6 +8,7 @@ typedef struct repository {
     const char* repo_dir; // path to the .eit folder.
 
     struct stage* stage;
+    struct head* head;
 } repository;
 
 // Find the root of the current repository and return the absolute path to it.

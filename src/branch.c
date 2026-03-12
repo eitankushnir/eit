@@ -32,6 +32,7 @@ void find_branch(const char* name, branch* out, repository* repo)
     fscanf(branch_file, "%s", hex);
     out->name = substr(name, -1);
     oid_from_hex(&out->commit_id, hex);
+    free(path);
 }
 
 void free_branch(branch* b)
@@ -49,4 +50,5 @@ void write_branch(branch* b, repository* repo)
     char* hex = oid_tostring(&b->commit_id);
     fprintf(branch_file, "%s", hex);
     free(hex);
+    free(path);
 }

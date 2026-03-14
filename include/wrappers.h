@@ -21,4 +21,7 @@ size_t maxlinelen(FILE* f);
 int non_opt_count(char** argv, int argc, int optind);
 char* substr(const char* str, int count);
 
+int mkpath(const char* path);
+int rmpath(const char* path);
+
 #endif

@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 void* _xmalloc(size_t bytes, int n)
 {
@@ -16,7 +17,8 @@ void* _xmalloc(size_t bytes, int n)
     return ptr;
 }
 
-void* _xrealloc(void* ptr, size_t bytes, int n) {
+void* _xrealloc(void* ptr, size_t bytes, int n)
+{
     void* new_ptr = realloc(ptr, n * bytes);
     if (new_ptr == NULL) {
         die("Fatal: Failed to reallocate memory.\n");
@@ -179,4 +181,47 @@ char* substr(const char* str, int count)
     strncpy(buf, str, count);
     buf[count] = '\0';
     return buf;
+}
+
+int mkpath(const char* path)
+{
+    strbuf pathbuf = STRBUF_INIT;
+    strbuf_addstr(&pathbuf, "./");
+    char* path_copy = strdup(path);
+    char* dir = strtok(path_copy, "/");
+    while (dir) {
+        char* next = strtok(NULL, "/");
+        if (next) {
+            strbuf_addf(&pathbuf, "%s/", dir);
+            mkdir(pathbuf.buf, 0755);
+        } else {
+            strbuf_addf(&pathbuf, "%s", dir);
+            FILE* final = fopen(pathbuf.buf, "a");
+            if (!final) {
+                free(path_copy);
+                strbuf_free(&pathbuf);
+                return -1;
+            }
+            fclose(final);
+        }
+
+        dir = next;
+    }
+
+    free(path_copy);
+    strbuf_free(&pathbuf);
+    return 0;
+}
+
+int rmpath(const char* path)
+{
+    if (remove(path) != 0) return -1;
+    char* slash_ptr = strrchr(path, '/');
+    if (!slash_ptr) return 0;
+
+    int slash_idx = slash_ptr - path;
+    char* dirname = substr(path, slash_idx);
+    int res = rmpath(dirname);
+    free(dirname);
+    return res;
 }

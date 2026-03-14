@@ -27,19 +27,19 @@ typedef struct stage {
 int load_stage(struct repository* repo);
 int write_stage(struct repository* repo);
 /**
- * Add a file to the stage, creating a blob for it in the process
- * If the file is already on the stage, that hash will be replaced.
+ * Add a path to the stage. provide the oid for it aswell.
+ * If the file is already on the stage, that oid will be replaced.
  */
-void add_to_stage(const char* path, struct repository* repo);
+void add_to_stage(stage* stage, const char* path, object_id oid);
 
 /** Remove a file from the stage */
-void remove_from_stage(const char* path, struct repository* repo);
+void remove_from_stage(stage* stage, const char* path);
 
 /** Get the index of the file on the stage */
-int index_on_stage(const char* path, struct repository* repo);
+int index_on_stage(stage* stage, const char* path);
 
 /** Find out if a file is already on the stage (might be a different version) */
-int is_on_stage(const char* path, struct repository* repo);
+int is_on_stage(stage* stage, const char* path);
 
 /**
  * Returns 1 if all files in the stage are not in a conflicted state

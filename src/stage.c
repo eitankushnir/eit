@@ -1,5 +1,4 @@
 #include "stage.h"
-#include "blob.h"
 #include "repository.h"
 #include "sha256.h"
 #include "strbuf.h"
@@ -77,6 +76,7 @@ int write_stage(struct repository* repo)
         write_stage_entry(repo->stage->entries[i], stage_file);
     }
     fclose(stage_file);
+    return 0;
 }
 
 static int read_entry(struct stage_entry* ent, FILE* f)
@@ -150,7 +150,7 @@ int load_stage(struct repository* repo)
     return 0;
 }
 
-void add_to_stage(const char* path, struct repository* repo)
+void add_to_stage(stage* stage, const char* path, object_id oid)
 {
     struct stat st;
     if (lstat(path, &st) != 0) {
@@ -161,17 +161,7 @@ void add_to_stage(const char* path, struct repository* repo)
         die("Error: Cannot add %s to the stage since it is a directory\n", path);
     }
 
-    char* repo_path = path_in_repo(path, repo);
-
-    int index = index_on_stage(path, repo);
-
-    FILE* file_to_add = fopen(path, "rb");
-    if (!file_to_add)
-        die("Fatal: failed to open file for addition");
-
-    object_id oid;
-    hash_blob_from_file(file_to_add, &oid, 1, repo);
-    fclose(file_to_add);
+    int index = index_on_stage(stage, path);
 
     // TOOD: figure out these merge statuses.
 
@@ -180,62 +170,59 @@ void add_to_stage(const char* path, struct repository* repo)
     stage_entry* new_entry;
     if (index == -1) {
         new_entry = xmalloc(1, stage_entry);
-        repo->stage->entries = realloc(repo->stage->entries, ++repo->stage->entry_count * sizeof(stage_entry*));
+        stage->entries = xrealloc(stage->entries, ++stage->entry_count, stage_entry*);
         int new_index = 0;
-        for (int i = 0; i < repo->stage->entry_count - 1; i++) {
-            stage_entry* ent = repo->stage->entries[i];
-            if (strcmp(repo_path, ent->path) < 0)
+        for (int i = 0; i < stage->entry_count - 1; i++) {
+            stage_entry* ent = stage->entries[i];
+            if (strcmp(path, ent->path) < 0)
                 break;
             new_index++;
         }
 
-        for (int i = repo->stage->entry_count - 1; i > new_index; i--) {
-            repo->stage->entries[i] = repo->stage->entries[i - 1];
+        for (int i = stage->entry_count - 1; i > new_index; i--) {
+            stage->entries[i] = stage->entries[i - 1];
         }
-        repo->stage->entries[new_index] = new_entry;
+        stage->entries[new_index] = new_entry;
     } else {
-        new_entry = repo->stage->entries[index];
+        new_entry = stage->entries[index];
         free(new_entry->path);
     }
 
-    new_entry->path = repo_path;
-    new_entry->path_len = strlen(repo_path);
+    new_entry->path = strdup(path);
+    new_entry->path_len = strlen(path);
     new_entry->stat_data = st;
     new_entry->flags = 0;
     new_entry->mode = normalize_mode(st.st_mode);
     oidcpy(&new_entry->oid, &oid);
 }
 
-int index_on_stage(const char* path, struct repository* repo)
+int index_on_stage(stage* stage, const char* path)
 {
-    char* repo_path = path_in_repo(path, repo);
-    for (int i = 0; i < repo->stage->entry_count; i++) {
-        if (strcmp(path, repo->stage->entries[i]->path) == 0) {
-            free(repo_path);
+    for (int i = 0; i < stage->entry_count; i++) {
+        if (strcmp(path, stage->entries[i]->path) == 0) {
             return i;
         }
     }
 
-    free(repo_path);
     return -1;
 }
 
-int is_on_stage(const char* path, struct repository* repo)
+int is_on_stage(stage* stage, const char* path)
 {
-    return index_on_stage(path, repo) != -1;
+    return index_on_stage(stage, path) != -1;
 }
 
-void remove_from_stage(const char* path, struct repository* repo)
+void remove_from_stage(stage* stage, const char* path)
 {
-    int index = index_on_stage(path, repo);
+    int index = index_on_stage(stage, path);
     if (index == -1)
         return;
 
-    stage_entry* to_remove = repo->stage->entries[index];
-    for (int i = index; i < repo->stage->entry_count - 1; i++) {
-        repo->stage->entries[i] = repo->stage->entries[i + 1];
+    stage_entry* to_remove = stage->entries[index];
+    for (int i = index; i < stage->entry_count - 1; i++) {
+        stage->entries[i] = stage->entries[i + 1];
     }
-    repo->stage->entry_count--;
+    stage->entry_count--;
 
     free(to_remove->path);
     free(to_remove);

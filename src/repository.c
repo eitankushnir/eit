@@ -87,13 +87,13 @@ char* path_in_repo(const char* path, repository* repo)
         if (errno != ENOENT) {
             should_die = 1;
         } else {
-            FILE* create = fopen(path, "a");
-            if (!create)
+            int res = mkpath(path);
+            if (res != 0)
                 should_die = 1;
             abspath = realpath(path, NULL);
             if (!abspath)
                 should_die = 1;
-            remove(path);
+            rmpath(path);
         }
 
         if (should_die) {

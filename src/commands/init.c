@@ -41,9 +41,9 @@ int cmd_init(char** argv, int argc, repository* repo)
     FILE* headfile = fopen(head_path.buf, "w");
     char* defaultBranch = read_config_str("init", "defaultBranch");
     if (!defaultBranch) {
-        fprintf(headfile, "ref: refs/heads/main");
+        fprintf(headfile, "ref: main");
     } else {
-        fprintf(headfile, "ref: refs/heads/%s", defaultBranch);
+        fprintf(headfile, "ref: %s", defaultBranch);
         free(defaultBranch);
     }
 

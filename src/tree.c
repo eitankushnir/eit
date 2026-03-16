@@ -11,7 +11,8 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-void init_root(tree_node *node) {
+void init_root(tree_node* node)
+{
     node->name = NULL;
     node->children = xmalloc(1, tree_node);
     node->mode = 0;
@@ -19,18 +20,21 @@ void init_root(tree_node *node) {
     node->parsed = 0;
 }
 
-static void increase_array(tree_node* node) {
+static void increase_array(tree_node* node)
+{
     node->children = realloc(node->children, ++node->child_count);
 }
 
-static char* cpy(const char* src) {
+static char* cpy(const char* src)
+{
     char* copy = xmalloc(strlen(src) + 1, char);
     strncpy(copy, src, strlen(src));
     copy[strlen(copy)] = '\0';
     return copy;
 }
 
-void add_leaf(tree_node *root, const char *path, unsigned int mode, object_id* oid) {
+void add_leaf(tree_node* root, const char* path, unsigned int mode, object_id* oid)
+{
     char* slashptr = strchr(path, '/');
     if (!slashptr) {
         increase_array(root);
@@ -63,22 +67,25 @@ void add_leaf(tree_node *root, const char *path, unsigned int mode, object_id* o
         new_node->mode = 0040000;
         new_node->parsed = 0;
         root->children[root->child_count - 1] = new_node;
-        
+
         // Go into the newly created directory.
         add_leaf(root->children[root->child_count - 1], path + index + 1, mode, oid);
     }
 }
 
-int is_hashable(tree_node *node) {
+int is_hashable(tree_node* node)
+{
     for (int i = 0; i < node->child_count; i++) {
         tree_node* child = node->children[i];
-        if (!child->parsed) return 0;
+        if (!child->parsed)
+            return 0;
     }
 
     return 1;
 }
 
-static void write_node(tree_node *node, repository *repo) {
+static void write_node(tree_node* node, repository* repo)
+{
     // Assume hashability from write_tree.
     FILE* buffer = tmpfile();
 
@@ -97,7 +104,8 @@ static void write_node(tree_node *node, repository *repo) {
     write_object(OBJ_TREE, buffer, repo, &node->oid);
 }
 
-void write_tree(tree_node *root, repository *repo) {
+void write_tree(tree_node* root, repository* repo)
+{
     if (is_hashable(root)) {
         write_node(root, repo);
         return;
@@ -105,16 +113,20 @@ void write_tree(tree_node *root, repository *repo) {
 
     for (int i = 0; i < root->child_count; i++) {
         tree_node* child = root->children[i];
-        if (child->child_count != 0) write_tree(child, repo);
+        if (child->child_count != 0)
+            write_tree(child, repo);
         child->parsed = 1;
     }
 
-    if (!is_hashable(root)) die("Something went wrong when writing the tree");
+    if (!is_hashable(root))
+        die("Something went wrong when writing the tree");
     write_node(root, repo);
 }
 
-void free_tree(tree_node *root) {
-    if (root->name) free(root->name);
+void free_tree(tree_node* root)
+{
+    if (root->name)
+        free(root->name);
 
     for (int i = 0; i < root->child_count; i++) {
         free_tree(root->children[i]);
@@ -123,9 +135,11 @@ void free_tree(tree_node *root) {
     free(root->children);
 }
 
-void print_tree(tree_node* node, repository* repo) {
-    if (!is_hashable(node)) die("Tree canno't be printed");
-    
+void print_tree(tree_node* node, repository* repo)
+{
+    if (!is_hashable(node))
+        die("Tree canno't be printed");
+
     for (int i = 0; i < node->child_count; i++) {
         tree_node* child = node->children[i];
         char* hex = oid_tostring(&child->oid);
@@ -136,12 +150,15 @@ void print_tree(tree_node* node, repository* repo) {
     }
 }
 
-void parse_tree(const char* hex, tree_node* out_node, repository* repo) {
+void parse_tree(const char* hex, tree_node* out_node, repository* repo)
+{
     object_type type = get_type(hex, repo);
-    if (type != OBJ_TREE) die("%s is not a valid tree object\n", hex);
+    if (type != OBJ_TREE)
+        die("%s is not a valid tree object\n", hex);
 
     FILE* objfile = open_object(hex, repo);
-    if (!objfile) die("Failed to read object %s\n", hex);
+    if (!objfile)
+        die("Failed to read object %s\n", hex);
 
     init_root(out_node);
 
@@ -157,15 +174,34 @@ void parse_tree(const char* hex, tree_node* out_node, repository* repo) {
         }
         char a = fgetc(objfile);
         fread(child->oid.hash, sizeof(uint8_t), 32, objfile);
-        char b = fgetc(objfile); //the space;
+        char b = fgetc(objfile); // the space;
         strbuf name = STRBUF_INIT;
         char c;
-        while (( c = fgetc(objfile)) != '\0') {
+        while ((c = fgetc(objfile)) != '\0') {
             strbuf_addchr(&name, c);
         }
         child->name = strbuf_detach(&name, 0);
         child->parsed = 1;
         out_node->child_count++;
         out_node->children[out_node->child_count - 1] = child;
+    }
+}
+
+void parse_tree_recursive(const char* hex, tree_node* out_node, repository* repo)
+{
+    parse_tree(hex, out_node, repo);
+    for (int i = 0; i < out_node->child_count; i++) {
+        tree_node* child = out_node->children[i];
+        char* child_hex = oid_tostring(&child->oid);
+
+        object_type type = get_type(child_hex, repo);
+        if (type == OBJ_TREE) {
+            tree_node node;
+            parse_tree_recursive(child_hex, &node, repo);
+            child->children = node.children;
+            child->child_count = node.child_count;
+        }
+
+        free(child_hex);
     }
 }

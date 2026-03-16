@@ -23,5 +23,6 @@ void free_tree(tree_node* root);
 
 void print_tree(tree_node* node, repository* repo);
 void parse_tree(const char* hex, tree_node* out_node, repository* repo);
+void parse_tree_recursive(const char* hex, tree_node* out_node, repository* repo);
 
 #endif

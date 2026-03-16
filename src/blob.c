@@ -71,3 +71,17 @@ void print_blob(const char *hex, repository *repo) {
         printf("%s", buf);
     }
 }
+
+void writeout_blob(const char *hex, repository *repo, const char *dest_path) {
+    FILE* objfile = open_object(hex, repo);
+    FILE* dest = fopen(dest_path, "wb");
+
+    // Get past the header.
+    while (fgetc(objfile) != '\0') { }
+
+    char* buf[4096];
+    int len;
+    while (( len = fread(buf, 1, sizeof(buf), objfile))) {
+        fwrite(buf, 1, len, dest);
+    }
+}

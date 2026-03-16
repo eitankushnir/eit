@@ -44,6 +44,7 @@ void free_branch(branch* b)
 void write_branch(branch* b, repository* repo)
 {
     char* path = get_branch_path(b->name, repo);
+    mkabspath(path);
     FILE* branch_file = fopen(path, "wb");
     if (!branch_file) {
         die("%s: Failed to open branch file for writing\n", b->name);

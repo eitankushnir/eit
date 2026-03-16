@@ -89,7 +89,7 @@ int cmd_update_stage(char** argv, int argc, repository* repo)
         } else {
             object_id oid;
             hash_blob_from_file(src, &oid, 1, repo);
-            add_to_stage(repo->stage, resolved_path, oid);
+            add_to_stage(repo->stage, resolved_path, oid, st);
         }
 
         free(resolved_path);

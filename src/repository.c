@@ -1,5 +1,6 @@
 #include "repository.h"
 #include "blob.h"
+#include "branch.h"
 #include "head.h"
 #include "sha256.h"
 #include "stage.h"
@@ -231,4 +232,33 @@ void swap_stage(repository* repo, struct stage* new_stage)
         i++;
     }
     repo->stage = new_stage;
+}
+
+int get_latest_commit_oid(repository *repo, object_id *out) {
+    if (repo->head->mode == DETACHED) {
+        oidcpy(out, &repo->head->current_commit);
+    } else if (repo->head->mode == NORMAL) {
+        branch b;
+        find_branch(repo->head->current_branch, &b, repo);
+        if (!b.name) return -1;
+        oidcpy(out, &b.commit_id);
+        free_branch(&b);
+    }
+
+    return 0;
+}
+
+int update_head(repository* repo, object_id* latest_commit_id) {
+    if (repo->head->mode == DETACHED) {
+        oidcpy(&repo->head->current_commit, latest_commit_id);
+        write_head(repo->head, repo);
+    } else if (repo->head->mode == NORMAL) {
+        branch b;
+        b.name = strdup(repo->head->current_branch);
+        oidcpy(&b.commit_id, latest_commit_id);
+        write_branch(&b, repo);
+        free_branch(&b);
+    }
+
+    return 0;
 }

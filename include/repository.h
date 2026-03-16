@@ -1,6 +1,7 @@
 #ifndef REPOSITORY_H
 #define REPOSITORY_H
 
+#include "sha256.h"
 #define REPO_DIR ".eit"
 
 typedef struct repository {
@@ -26,5 +27,8 @@ void swap_stage(repository* repo, struct stage* new_stage);
 
 int mkpath(repository* repo, const char* path);
 int rmpath(repository* repo, const char* path);
+
+int get_latest_commit_oid(repository* repo, object_id* out);
+int update_head(repository* repo, object_id* latest_commit_id);
 
 #endif

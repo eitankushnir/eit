@@ -186,7 +186,7 @@ char* substr(const char* str, int count)
 int mkabspath(const char* path)
 {
     strbuf pathbuf = STRBUF_INIT;
-    strbuf_addstr(&pathbuf, "./");
+    strbuf_addstr(&pathbuf, "/");
     char* path_copy = strdup(path);
     char* dir = strtok(path_copy, "/");
     while (dir) {

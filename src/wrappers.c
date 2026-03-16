@@ -183,7 +183,7 @@ char* substr(const char* str, int count)
     return buf;
 }
 
-int mkpath(const char* path)
+int mkabspath(const char* path)
 {
     strbuf pathbuf = STRBUF_INIT;
     strbuf_addstr(&pathbuf, "./");
@@ -213,7 +213,7 @@ int mkpath(const char* path)
     return 0;
 }
 
-int rmpath(const char* path)
+int rmabspath(const char* path, const char* stopping_point)
 {
     if (remove(path) != 0) return -1;
     char* slash_ptr = strrchr(path, '/');
@@ -221,7 +221,8 @@ int rmpath(const char* path)
 
     int slash_idx = slash_ptr - path;
     char* dirname = substr(path, slash_idx);
-    int res = rmpath(dirname);
+    if (strcmp(dirname, stopping_point) == 0) return 0;
+    int res = rmabspath(dirname, stopping_point);
     free(dirname);
     return res;
 }

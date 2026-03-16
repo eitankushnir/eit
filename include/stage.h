@@ -30,7 +30,7 @@ int write_stage(struct repository* repo);
  * Add a path to the stage. provide the oid for it aswell.
  * If the file is already on the stage, that oid will be replaced.
  */
-void add_to_stage(stage* stage, const char* path, object_id oid);
+void add_to_stage(stage* stage, const char* path, object_id oid, struct stat st);
 
 /** Remove a file from the stage */
 void remove_from_stage(stage* stage, const char* path);
@@ -47,6 +47,7 @@ int is_on_stage(stage* stage, const char* path);
 int stage_can_be_written(stage* stage);
 
 void construct_stage_tree(struct tree_node* out_root, stage* stage);
+void reconstruct_stage_from_tree(stage* out_stage, tree_node* root);
 
 void get_modified_entries(stage* out, repository* repo);
 void get_deleted_entries(stage* out, repository* repo);

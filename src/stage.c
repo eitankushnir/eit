@@ -1,4 +1,5 @@
 #include "stage.h"
+#include "object.h"
 #include "repository.h"
 #include "sha256.h"
 #include "strbuf.h"
@@ -150,17 +151,8 @@ int load_stage(struct repository* repo)
     return 0;
 }
 
-void add_to_stage(stage* stage, const char* path, object_id oid)
+void add_to_stage(stage* stage, const char* path, object_id oid, struct stat st)
 {
-    struct stat st;
-    if (lstat(path, &st) != 0) {
-        perror("Failed to stat");
-        die("");
-    }
-    if (S_ISDIR(st.st_mode)) {
-        die("Error: Cannot add %s to the stage since it is a directory\n", path);
-    }
-
     int index = index_on_stage(stage, path);
 
     // TOOD: figure out these merge statuses.
@@ -265,8 +257,7 @@ void get_modified_entries(stage* out, repository* repo)
             continue;
         }
 
-        int time_changed = (st.st_mtim.tv_sec != ent->stat_data.st_mtim.tv_sec) ||
-                            (st.st_mtim.tv_nsec != ent->stat_data.st_mtim.tv_nsec);
+        int time_changed = (st.st_mtim.tv_sec != ent->stat_data.st_mtim.tv_sec) || (st.st_mtim.tv_nsec != ent->stat_data.st_mtim.tv_nsec);
         int size_changed = (st.st_size != ent->stat_data.st_size);
 
         if (time_changed || size_changed) {
@@ -277,7 +268,8 @@ void get_modified_entries(stage* out, repository* repo)
     }
 }
 
-void get_deleted_entries(stage *out, repository *repo) {
+void get_deleted_entries(stage* out, repository* repo)
+{
     stage* s = repo->stage;
     out->entry_count = 0;
     out->entries = NULL;
@@ -290,7 +282,8 @@ void get_deleted_entries(stage *out, repository *repo) {
         struct stat st;
         int del = 0;
         if (lstat(realpath.buf, &st) != 0) {
-            if (errno == ENOENT) del = 1;
+            if (errno == ENOENT)
+                del = 1;
         }
 
         if (del) {
@@ -299,5 +292,45 @@ void get_deleted_entries(stage *out, repository *repo) {
         }
 
         strbuf_free(&realpath);
+    }
+}
+
+static void recursive_reconstruction_helper(stage* out, char* path, tree_node* node)
+{
+    for (int i = 0; i < node->child_count; i++) {
+        tree_node* child = node->children[i];
+        int is_blob = child->child_count == 0;
+        if (is_blob) {
+            strbuf newpathbuf = STRBUF_INIT;
+            strbuf_addf(&newpathbuf, "%s/%s", path, child->name);
+            struct stat st = { 0 };
+            st.st_mode = child->mode;
+            add_to_stage(out, newpathbuf.buf, child->oid, st);
+            strbuf_free(&newpathbuf);
+        } else {
+            strbuf newpathbuf = STRBUF_INIT;
+            strbuf_addf(&newpathbuf, "%s/%s/", path, child->name);
+            recursive_reconstruction_helper(out, newpathbuf.buf, child);
+            strbuf_free(&newpathbuf);
+        }
+    }
+}
+
+void reconstruct_stage_from_tree(stage* out_stage, tree_node* root)
+{
+    memset(out_stage, 0, sizeof(stage));
+    for (int i = 0; i < root->child_count; i++) {
+        tree_node* child = root->children[i];
+        int is_blob = child->child_count == 0;
+        if (is_blob) {
+            struct stat st = { 0 };
+            st.st_mode = child->mode;
+            add_to_stage(out_stage, child->name, child->oid, st);
+        } else {
+            strbuf newpathbuf = STRBUF_INIT;
+            strbuf_addf(&newpathbuf, "%s", child->name);
+            recursive_reconstruction_helper(out_stage, newpathbuf.buf, child);
+            strbuf_free(&newpathbuf);
+        }
     }
 }

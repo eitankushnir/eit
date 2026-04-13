@@ -114,3 +114,11 @@ char* path_in_repo(const char* path, repository* repo)
     free(abspath);
     return repo_path;
 }
+
+void discard_repository(repository* repo)
+{
+    free(repo->repo_dir);
+    free(repo->repo_root);
+    discard_stage(repo->stage);
+    free(repo->stage);
+}

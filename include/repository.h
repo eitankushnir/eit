@@ -21,4 +21,6 @@ char* find_repository_root(void);
 // Retuns a malloc'd path that begins in the repo.
 char* path_in_repo(const char* path, repository* repo);
 
+void discard_repository(repository* repo);
+
 #endif

@@ -150,6 +150,18 @@ int load_stage(struct repository* repo)
     return 0;
 }
 
+void discard_stage(struct stage* stage)
+{
+    // free the entries
+    for (int i = 0; i < stage->entry_count; i++) {
+        stage_entry* ent = stage->entries[i];
+        free(ent->path);
+        free(ent);
+    }
+
+    free(stage->entries);
+}
+
 void add_to_stage(const char* path, struct repository* repo)
 {
     struct stat st;
@@ -278,8 +290,7 @@ void get_modified_entries(stage* out, repository* repo)
             continue;
         }
 
-        int time_changed = (st.st_mtim.tv_sec != ent->stat_data.st_mtim.tv_sec) ||
-                            (st.st_mtim.tv_nsec != ent->stat_data.st_mtim.tv_nsec);
+        int time_changed = (st.st_mtim.tv_sec != ent->stat_data.st_mtim.tv_sec) || (st.st_mtim.tv_nsec != ent->stat_data.st_mtim.tv_nsec);
         int size_changed = (st.st_size != ent->stat_data.st_size);
 
         if (time_changed || size_changed) {
@@ -290,7 +301,8 @@ void get_modified_entries(stage* out, repository* repo)
     }
 }
 
-void get_deleted_entries(stage *out, repository *repo) {
+void get_deleted_entries(stage* out, repository* repo)
+{
     stage* s = repo->stage;
     out->entry_count = 0;
     out->entries = NULL;
@@ -303,7 +315,8 @@ void get_deleted_entries(stage *out, repository *repo) {
         struct stat st;
         int del = 0;
         if (lstat(realpath.buf, &st) != 0) {
-            if (errno == ENOENT) del = 1;
+            if (errno == ENOENT)
+                del = 1;
         }
 
         if (del) {

@@ -1,4 +1,5 @@
 #include "commands.h"
+#include "diff.h"
 #include "repository.h"
 #include <stddef.h>
 #include <stdio.h>
@@ -12,10 +13,11 @@ static command commands[] = {
     { "write-tree", cmd_write_tree },
     { "cat-file", cmd_cat_file },
     { "ls-files", cmd_ls_files },
-    {"commit-tree", cmd_commit_tree},
+    { "commit-tree", cmd_commit_tree },
 };
 
-void print_help(char* arg) {
+void print_help(char* arg)
+{
     printf("Usage: %s <command> [<arguments>]\n", arg);
 }
 
@@ -37,6 +39,8 @@ int main(int argc, char* argv[])
     }
 
     printf("Unkown command: %s\n", argv[1]);
+
+    discard_repository(&repo);
 
     return 1;
 }

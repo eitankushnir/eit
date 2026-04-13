@@ -1,7 +1,6 @@
 #ifndef STAGE_H
 #define STAGE_H
 
-
 #include "repository.h"
 #include "sha256.h"
 #include "tree.h"
@@ -25,6 +24,7 @@ typedef struct stage {
 } stage;
 
 int load_stage(struct repository* repo);
+void discard_stage(struct stage* stage);
 int write_stage(struct repository* repo);
 /**
  * Add a file to the stage, creating a blob for it in the process

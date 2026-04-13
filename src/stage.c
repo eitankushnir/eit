@@ -123,7 +123,7 @@ static int read_entry(struct stage_entry* ent, FILE* f)
     ent->flags = ntohl(flags);
     char c = fgetc(f);
     while ((c = fgetc(f)) != '\0') {
-        ent->path = realloc(ent->path, ++ent->path_len);
+        ent->path = realloc(ent->path, ++ent->path_len + 1);
         ent->path[ent->path_len - 1] = c;
     }
     ent->path[ent->path_len] = '\0';
@@ -142,7 +142,7 @@ int load_stage(struct repository* repo)
 
     stage_entry* ent = xmalloc(1, stage_entry);
     while (read_entry(ent, stage_file) == 0) {
-        out->entries = realloc(out->entries, ++out->entry_count);
+        out->entries = xrealloc(out->entries, ++out->entry_count, stage_entry*);
         out->entries[out->entry_count - 1] = ent;
         ent = xmalloc(1, stage_entry);
     }
@@ -163,7 +163,7 @@ void discard_stage(struct stage* stage)
     free(stage->entries);
 }
 
-void add_to_stage(const char* path, struct repository* repo)
+void add_to_stage(stage* stage, const char* path, object_id oid, struct stat st)
 {
     int index = index_on_stage(stage, path);
 

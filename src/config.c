@@ -135,6 +135,7 @@ char* read_config_str(char* category, char* key)
 
     char* value = find_value(path.buf, category, key);
     if (value) {
+        strbuf_free(&path);
         return value;
     }
 
@@ -143,6 +144,7 @@ char* read_config_str(char* category, char* key)
     strbuf_addf(&path, "%s/%s", getenv("HOME"), CONFIG_FILE);
 
     value = find_value(path.buf, category, key);
+    strbuf_free(&path);
     return value;
 }
 

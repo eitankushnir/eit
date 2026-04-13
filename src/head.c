@@ -14,14 +14,16 @@ static char* get_head_path(repository* repo)
     return strbuf_detach(&path, 0);
 }
 
-void parse_head(head *out, repository *repo) {
+void parse_head(head* out, repository* repo)
+{
     char* path = get_head_path(repo);
     FILE* headfile = fopen(path, "rb");
-    if (!headfile) die("Failed to open head for parsing\n");
+    if (!headfile)
+        die("Failed to open head for parsing\n");
     strbuf line = STRBUF_INIT;
 
     char c;
-    while (( c = fgetc(headfile)) != EOF) {
+    while ((c = fgetc(headfile)) != EOF) {
         strbuf_addchr(&line, c);
     }
 
@@ -38,7 +40,8 @@ void parse_head(head *out, repository *repo) {
     strbuf_free(&line);
 }
 
-void write_head(head *head, repository* repo) {
+void write_head(head* head, repository* repo)
+{
     char* path = get_head_path(repo);
     FILE* headfile = fopen(path, "wb");
 
@@ -51,4 +54,10 @@ void write_head(head *head, repository* repo) {
     }
 
     free(path);
+}
+
+void discard_head(head* head)
+{
+    if (head->mode == NORMAL)
+        free(head->current_branch);
 }

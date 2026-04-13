@@ -82,6 +82,7 @@ void write_object(object_type type, FILE* src, repository* repo, object_id* out_
 
     strbuf_free(&header);
     strbuf_free(&object_path);
+    free(hex);
 }
 
 FILE* open_object(const char* hex_oid, repository* repo)

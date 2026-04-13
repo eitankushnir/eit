@@ -7,6 +7,7 @@
 #include "tree.h"
 #include "wrappers.h"
 #include <getopt.h>
+#include <stdlib.h>
 #include <time.h>
 
 int cmd_commit(char** argv, int argc, repository* repo)
@@ -49,11 +50,16 @@ int cmd_commit(char** argv, int argc, repository* repo)
     char* email = read_config_str("user", "email");
     char* name = read_config_str("user", "name");
 
-    if (!name) die("Fatal: must specify user.name in the config\n");
-    if (!email) die("Fatal: must specify user.email in the config\n");
+    if (!name)
+        die("Fatal: must specify user.name in the config\n");
+    if (!email)
+        die("Fatal: must specify user.email in the config\n");
 
     add_author(&c, name, email, ctime);
     add_commiter(&c, name, email, ctime);
+
+    free(name);
+    free(email);
 
     write_commit(&c, repo);
     update_head(repo, &c.oid);

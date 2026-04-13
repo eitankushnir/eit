@@ -23,6 +23,7 @@ void find_branch(const char* name, branch* out, repository* repo)
     if (!branch_file) {
         if (errno == ENOENT) {
             out->name = NULL;
+            free(path);
             return;
         } else {
             die("%s: Failed to open branch file for reading\n", name);

@@ -22,15 +22,7 @@ void init_root(tree_node* node)
 
 static void increase_array(tree_node* node)
 {
-    node->children = realloc(node->children, ++node->child_count);
-}
-
-static char* cpy(const char* src)
-{
-    char* copy = xmalloc(strlen(src) + 1, char);
-    strncpy(copy, src, strlen(src));
-    copy[strlen(copy)] = '\0';
-    return copy;
+    node->children = xrealloc(node->children, ++node->child_count, tree_node*);
 }
 
 void add_leaf(tree_node* root, const char* path, unsigned int mode, object_id* oid)
@@ -39,8 +31,8 @@ void add_leaf(tree_node* root, const char* path, unsigned int mode, object_id* o
     if (!slashptr) {
         increase_array(root);
         tree_node* new_node = xmalloc(1, tree_node);
-        new_node->name = cpy(path);
-        oidcpy(&new_node->oid, oid);
+        new_node->name = strdup(path);
+        new_node->oid = *oid;
         new_node->mode = mode;
         new_node->parsed = 1;
         root->children[root->child_count - 1] = new_node;

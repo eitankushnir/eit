@@ -69,13 +69,13 @@ void init_current_repository_info(repository* repo)
     strbuf root = STRBUF_INIT;
     char* repo_parent = find_repository_root();
     if (!repo_parent) {
-        repo->repo_root = NULL;
-        repo->repo_dir = NULL;
+        memset(repo, 0, sizeof(repository));
         return;
     }
     strbuf_addf(&root, "%s/%s", repo_parent, REPO_DIR);
     repo->repo_dir = strbuf_detach(&root, 0);
     repo->repo_root = repo_parent;
+
     repo->stage = xmalloc(1, stage);
     load_stage(repo);
 
@@ -120,15 +120,26 @@ char* path_in_repo(const char* path, repository* repo)
     char* repo_path = xmalloc(len, char);
     strncpy(repo_path, abspath + strlen(repo->repo_root) + 1, len);
     free(abspath);
+    free(buf);
     return repo_path;
 }
 
 void discard_repository(repository* repo)
 {
-    free(repo->repo_dir);
-    free(repo->repo_root);
-    discard_stage(repo->stage);
-    free(repo->stage);
+    if (repo->repo_root) {
+        free(repo->repo_dir);
+        free(repo->repo_root);
+    }
+    if (repo->stage) {
+        discard_stage(repo->stage);
+        free(repo->stage);
+    }
+    if (repo->head) {
+        discard_head(repo->head);
+        free(repo->head);
+    }
+}
+
 int mkpath(repository* repo, const char* path)
 {
     char* cwd = getcwd(NULL, 0);
@@ -240,13 +251,15 @@ void swap_stage(repository* repo, struct stage* new_stage)
     repo->stage = new_stage;
 }
 
-int get_latest_commit_oid(repository *repo, object_id *out) {
+int get_latest_commit_oid(repository* repo, object_id* out)
+{
     if (repo->head->mode == DETACHED) {
         oidcpy(out, &repo->head->current_commit);
     } else if (repo->head->mode == NORMAL) {
         branch b;
         find_branch(repo->head->current_branch, &b, repo);
-        if (!b.name) return -1;
+        if (!b.name)
+            return -1;
         oidcpy(out, &b.commit_id);
         free_branch(&b);
     }
@@ -254,7 +267,8 @@ int get_latest_commit_oid(repository *repo, object_id *out) {
     return 0;
 }
 
-int update_head(repository* repo, object_id* latest_commit_id) {
+int update_head(repository* repo, object_id* latest_commit_id)
+{
     if (repo->head->mode == DETACHED) {
         oidcpy(&repo->head->current_commit, latest_commit_id);
         write_head(repo->head, repo);

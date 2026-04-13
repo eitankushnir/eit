@@ -13,9 +13,9 @@ static command commands[] = {
     { "write-tree", cmd_write_tree },
     { "cat-file", cmd_cat_file },
     { "ls-files", cmd_ls_files },
-    {"commit-tree", cmd_commit_tree},
-    {"switch", cmd_switch},
-    {"commit", cmd_commit},
+    { "commit-tree", cmd_commit_tree },
+    { "switch", cmd_switch },
+    { "commit", cmd_commit },
 };
 
 void print_help(char* arg)
@@ -33,16 +33,23 @@ int main(int argc, char* argv[])
     repository repo = { 0 };
     init_current_repository_info(&repo);
 
+    int result;
+    int found_command = 0;
     size_t command_count = sizeof(commands) / sizeof(command);
     for (size_t i = 0; i < command_count; i++) {
         if (strcmp(argv[1], commands[i].name) == 0) {
-            return commands[i].fn(argv + 1, argc - 1, &repo);
+            result = commands[i].fn(argv + 1, argc - 1, &repo);
+            found_command = 1;
+            break;
         }
     }
 
-    printf("Unkown command: %s\n", argv[1]);
+    if (!found_command) {
+        printf("Unkown command: %s\n", argv[1]);
+        result = 1;
+    }
 
     discard_repository(&repo);
 
-    return 1;
+    return result;
 }

@@ -1,4 +1,5 @@
 #include "strbuf.h"
+#include "wrappers.h"
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -45,13 +46,7 @@ void strbuf_grow(strbuf* sb, size_t extra)
         new_alloc = sb->len + extra + 1;
     }
 
-    char* new_buf = realloc(sb->buf, new_alloc);
-    if (!new_buf) {
-        perror("strbuf_grow failed");
-        exit(1);
-    }
-
-    sb->buf = new_buf;
+    sb->buf = xrealloc(sb->buf, new_alloc, char);
     sb->alloc = new_alloc;
 }
 

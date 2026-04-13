@@ -1,8 +1,11 @@
+#include "blob.h"
 #include "commands.h"
 #include "repository.h"
+#include "sha256.h"
 #include "stage.h"
 #include <getopt.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 
 struct options {
@@ -44,6 +47,7 @@ int cmd_update_stage(char** argv, int argc, repository* repo)
     int first_file_index = optind;
     for (int i = first_file_index; i < argc; i++) {
         char* path = argv[i];
+        char* resolved_path = path_in_repo(path, repo);
         struct stat st;
         if (stat(path, &st) != 0) {
             if (!cmd_opts.remove) {
@@ -51,34 +55,44 @@ int cmd_update_stage(char** argv, int argc, repository* repo)
             }
             else {
                 printf("%s was found on stage but is missing -- removing\n", path);
-                remove_from_stage(path, repo);
+                remove_from_stage(repo->stage, resolved_path);
             }
+            free(resolved_path);
             continue;
         }
         if (S_ISDIR(st.st_mode)) {
             fprintf(stderr, "Warning: %s is a directory -- ignoring\n", path);
+            free(resolved_path);
             continue;
         }
 
-        int idx = index_on_stage(path, repo);
-        if (idx == -1 && cmd_opts.add) {
-            add_to_stage(path, repo);
-            continue;
-        }
+        int idx = index_on_stage(repo->stage, resolved_path);
         if (idx == -1 && !cmd_opts.add) {
             fprintf(stderr, "Warning: %s is not on the stage. to add it run with --add\n", path);
+            free(resolved_path);
             continue;
         }
         if (cmd_opts.force_remove) {
-            remove_from_stage(path, repo);
+            remove_from_stage(repo->stage, resolved_path);
             printf("%s was found on stage -- removing\n", path);
+            free(resolved_path);
             continue;
         }
 
         if (cmd_opts.remove) {
             fprintf(stderr, "Warning: %s is not missing, to remove it from the stage regardless run with --force-remove.\n", path);
         }
-        add_to_stage(path, repo);
+
+        FILE* src = fopen(path, "r");
+        if (!src) {
+            fprintf(stderr, "Warning: Failed to open %s for hashing -- skipping\n", path);
+        } else {
+            object_id oid;
+            hash_blob_from_file(src, &oid, 1, repo);
+            add_to_stage(repo->stage, resolved_path, oid, st);
+        }
+
+        free(resolved_path);
     }
 
     write_stage(repo);

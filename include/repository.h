@@ -1,6 +1,7 @@
 #ifndef REPOSITORY_H
 #define REPOSITORY_H
 
+#include "sha256.h"
 #define REPO_DIR ".eit"
 
 typedef struct repository {
@@ -8,6 +9,7 @@ typedef struct repository {
     const char* repo_dir; // path to the .eit folder.
 
     struct stage* stage;
+    struct head* head;
 } repository;
 
 // Find the root of the current repository and return the absolute path to it.
@@ -22,5 +24,12 @@ char* find_repository_root(void);
 char* path_in_repo(const char* path, repository* repo);
 
 void discard_repository(repository* repo);
+void swap_stage(repository* repo, struct stage* new_stage);
+
+int mkpath(repository* repo, const char* path);
+int rmpath(repository* repo, const char* path);
+
+int get_latest_commit_oid(repository* repo, object_id* out);
+int update_head(repository* repo, object_id* latest_commit_id);
 
 #endif

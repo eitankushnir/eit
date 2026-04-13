@@ -27,19 +27,19 @@ int load_stage(struct repository* repo);
 void discard_stage(struct stage* stage);
 int write_stage(struct repository* repo);
 /**
- * Add a file to the stage, creating a blob for it in the process
- * If the file is already on the stage, that hash will be replaced.
+ * Add a path to the stage. provide the oid for it aswell.
+ * If the file is already on the stage, that oid will be replaced.
  */
-void add_to_stage(const char* path, struct repository* repo);
+void add_to_stage(stage* stage, const char* path, object_id oid, struct stat st);
 
 /** Remove a file from the stage */
-void remove_from_stage(const char* path, struct repository* repo);
+void remove_from_stage(stage* stage, const char* path);
 
 /** Get the index of the file on the stage */
-int index_on_stage(const char* path, struct repository* repo);
+int index_on_stage(stage* stage, const char* path);
 
 /** Find out if a file is already on the stage (might be a different version) */
-int is_on_stage(const char* path, struct repository* repo);
+int is_on_stage(stage* stage, const char* path);
 
 /**
  * Returns 1 if all files in the stage are not in a conflicted state
@@ -47,6 +47,7 @@ int is_on_stage(const char* path, struct repository* repo);
 int stage_can_be_written(stage* stage);
 
 void construct_stage_tree(struct tree_node* out_root, stage* stage);
+void reconstruct_stage_from_tree(stage* out_stage, tree_node* root);
 
 void get_modified_entries(stage* out, repository* repo);
 void get_deleted_entries(stage* out, repository* repo);

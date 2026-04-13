@@ -20,4 +20,6 @@ void hash_blob_from_stdin(object_id *out_oid, int write_to_store, repository* re
 
 void print_blob(const char* hex, repository* repo);
 
+void writeout_blob(const char* hex, repository* repo, const char* dest_path);
+
 #endif

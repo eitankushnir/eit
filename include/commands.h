@@ -19,4 +19,7 @@ int cmd_cat_file(char** argv, int argc, repository* repo);
 int cmd_ls_files(char** argv, int argc, repository* repo);
 int cmd_commit_tree(char** argv, int argc, repository* repo);
 
+int cmd_switch(char** argv, int argc, repository* repo);
+int cmd_commit(char** argv, int argc, repository* repo);
+
 #endif

@@ -1,6 +1,5 @@
 #ifndef WRAPPERS_H
 #define WRAPPERS_H
-#include "repository.h"
 #include <stddef.h>
 #include <stdio.h>
 
@@ -21,5 +20,8 @@ size_t maxlinelen(FILE* f);
 
 int non_opt_count(char** argv, int argc, int optind);
 char* substr(const char* str, int count);
+
+int mkabspath(const char* path);
+int rmabspath(const char* path, const char* stopping_point);
 
 #endif

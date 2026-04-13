@@ -19,19 +19,17 @@ struct options {
     int force;
 };
 
-static void switch_commit(char* hex, repository* repo)
+static void switch_commit(const oid_hex* hex, repository* repo)
 {
     commit c;
     tree_node root;
     stage new_stage;
     parse_commit(hex, &c, repo);
-    char* tree_hex = oid_tostring(&c.tree_oid);
-    parse_tree_recursive(tree_hex, &root, repo);
+    oid_hex tree_hex = oid_tostring(&c.tree_oid);
+    parse_tree_recursive(&tree_hex, &root, repo);
     reconstruct_stage_from_tree(&new_stage, &root);
     swap_stage(repo, &new_stage);
     write_stage(repo);
-
-    free(hex);
 }
 
 int cmd_switch(char** argv, int argc, repository* repo)
@@ -86,7 +84,8 @@ int cmd_switch(char** argv, int argc, repository* repo)
     else if (repo->head->mode == NORMAL) {
         branch h;
         find_branch(repo->head->current_branch, &h, repo);
-        if (!h.name && !cmd_opts.detach) die("Error: Repo's head branch doesn't currently point to any commit, please make some before using switch\n");
+        if (!h.name && !cmd_opts.detach)
+            die("Error: Repo's head branch doesn't currently point to any commit, please make some before using switch\n");
         current_commit_id = h.commit_id;
         free_branch(&h);
     }
@@ -97,9 +96,8 @@ int cmd_switch(char** argv, int argc, repository* repo)
             starting_point = argv[optind + 1];
         if (starting_point) {
             printf("Given point");
-            char* hex = complete_hash_hex(starting_point, repo);
-            oid_from_hex(&current_commit_id, hex);
-            free(hex);
+            oid_hex hex = complete_hash_hex(starting_point, repo);
+            current_commit_id = oid_from_hex(&hex);
         }
         branch b;
         find_branch(branch_name, &b, repo);
@@ -118,11 +116,11 @@ int cmd_switch(char** argv, int argc, repository* repo)
         write_head(repo->head, repo);
     } else if (cmd_opts.detach) {
         char* starting_point = argv[optind];
-        char* hex = complete_hash_hex(starting_point, repo);
-        oid_from_hex(&repo->head->current_commit, hex);
+        oid_hex hex = complete_hash_hex(starting_point, repo);
+        repo->head->current_commit = oid_from_hex(&hex);
         repo->head->mode = DETACHED;
         write_head(repo->head, repo);
-        switch_commit(hex, repo);
+        switch_commit(&hex, repo);
     } else {
         char* branch_name = argv[optind];
         branch b;
@@ -133,8 +131,8 @@ int cmd_switch(char** argv, int argc, repository* repo)
         repo->head->current_branch = strdup(branch_name);
         repo->head->mode = NORMAL;
         write_head(repo->head, repo);
-        char* hex = oid_tostring(&b.commit_id);
-        switch_commit(hex, repo);
+        oid_hex hex = oid_tostring(&b.commit_id);
+        switch_commit(&hex, repo);
     }
 
     return 0;

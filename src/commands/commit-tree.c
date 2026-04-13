@@ -3,6 +3,7 @@
 #include "config.h"
 #include "object.h"
 #include "sha256.h"
+#include "tree.h"
 #include "wrappers.h"
 #include <bits/getopt_core.h>
 #include <getopt.h>
@@ -41,14 +42,13 @@ int cmd_commit_tree(char** argv, int argc, repository* repo)
 
             char* phex = strtok(optarg, " ");
             while (phex) {
-                char* full_hex = complete_hash_hex(phex, repo);
-                if (get_type(full_hex, repo) != OBJ_COMMIT)
+                oid_hex full_hex = complete_hash_hex(phex, repo);
+                if (get_type(&full_hex, repo) != OBJ_COMMIT)
                     die("%s is not a valid commit hash\n", phex);
                 object_id pid;
-                oid_from_hex(&pid, full_hex);
+                pid = oid_from_hex(&full_hex);
                 add_parent(&c, &pid);
                 phex = strtok(NULL, " ");
-                free(full_hex);
             }
             parents = 1;
             break;
@@ -74,12 +74,12 @@ int cmd_commit_tree(char** argv, int argc, repository* repo)
     }
 
     char* thex = argv[optind];
-    char* full_hex = complete_hash_hex(thex, repo);
-    if (get_type(full_hex, repo) != OBJ_TREE)
+    oid_hex full_hex = complete_hash_hex(thex, repo);
+    if (get_type(&full_hex, repo) != OBJ_TREE)
         die("%s is not a valid tree hash\n", thex);
 
     object_id toid;
-    oid_from_hex(&toid, full_hex);
+    toid = oid_from_hex(&full_hex);
     set_tree(&c, &toid);
 
     unsigned int ctime;
@@ -87,19 +87,21 @@ int cmd_commit_tree(char** argv, int argc, repository* repo)
     char* email = read_config_str("user", "email");
     char* name = read_config_str("user", "name");
 
-    if (!name) die("Fatal: must specify user.name in the config\n");
-    if (!email) die("Fatal: must specify user.email in the config\n");
+    if (!name)
+        die("Fatal: must specify user.name in the config\n");
+    if (!email)
+        die("Fatal: must specify user.email in the config\n");
 
     add_author(&c, name, email, ctime);
     add_commiter(&c, name, email, ctime);
 
     write_commit(&c, repo);
-    char* final_hex = oid_tostring(&c.oid);
-    printf("%s\n", final_hex);
+    oid_hex final_hex = oid_tostring(&c.oid);
+    printf("%s\n", final_hex.hex);
 
-    free(final_hex);
     free(name);
     free(email);
+    free_commit(&c);
 
     return 0;
 }

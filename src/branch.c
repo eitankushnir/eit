@@ -30,10 +30,10 @@ void find_branch(const char* name, branch* out, repository* repo)
         }
     }
 
-    char hex[65];
-    fscanf(branch_file, "%s", hex);
+    oid_hex hex;
+    fscanf(branch_file, "%s", hex.hex);
     out->name = substr(name, -1);
-    oid_from_hex(&out->commit_id, hex);
+    out->commit_id = oid_from_hex(&hex);
     free(path);
 }
 
@@ -50,8 +50,7 @@ void write_branch(branch* b, repository* repo)
     if (!branch_file) {
         die("%s: Failed to open branch file for writing\n", b->name);
     }
-    char* hex = oid_tostring(&b->commit_id);
-    fprintf(branch_file, "%s", hex);
-    free(hex);
+    oid_hex hex = oid_tostring(&b->commit_id);
+    fprintf(branch_file, "%s", hex.hex);
     free(path);
 }

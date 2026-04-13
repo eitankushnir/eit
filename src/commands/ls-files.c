@@ -47,7 +47,8 @@ int cmd_ls_files(char** argv, int argc, repository* repo)
         }
     }
 
-    if (!cmd_opts.show_del && !cmd_opts.show_mod) cmd_opts.show_cached = 1;
+    if (!cmd_opts.show_del && !cmd_opts.show_mod)
+        cmd_opts.show_cached = 1;
     argc = non_opt_count(argv, argc, optind);
     if (argc != 0) {
         fprintf(stderr, "Warning: Ingnoring all other non-option arguments\n");
@@ -57,19 +58,18 @@ int cmd_ls_files(char** argv, int argc, repository* repo)
         stage* s = repo->stage;
         for (int i = 0; i < s->entry_count; i++) {
             stage_entry* ent = s->entries[i];
-            char* hex = oid_tostring(&ent->oid);
-            
-            printf("%06o %s %d    %s\n", ent->mode, hex, ent->flags & 0b11, ent->path);
-            free(hex);
+            oid_hex hex = oid_tostring(&ent->oid);
+
+            printf("%06o %s %d    %s\n", ent->mode, hex.hex, ent->flags & 0b11, ent->path);
         }
         return 0;
     }
-    
+
     if (cmd_opts.show_cached) {
         stage* s = repo->stage;
         for (int i = 0; i < s->entry_count; i++) {
             stage_entry* ent = s->entries[i];
-            
+
             printf("%s\n", ent->path);
         }
         return 0;
@@ -80,18 +80,17 @@ int cmd_ls_files(char** argv, int argc, repository* repo)
         get_modified_entries(&mod_stage, repo);
         for (int i = 0; i < mod_stage.entry_count; i++) {
             stage_entry* ent = mod_stage.entries[i];
-            
+
             printf("%s\n", ent->path);
         }
     }
-
 
     if (cmd_opts.show_del) {
         stage del_stage;
         get_deleted_entries(&del_stage, repo);
         for (int i = 0; i < del_stage.entry_count; i++) {
             stage_entry* ent = del_stage.entries[i];
-            
+
             printf("%s\n", ent->path);
         }
     }

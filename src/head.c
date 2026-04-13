@@ -32,7 +32,10 @@ void parse_head(head* out, repository* repo)
         out->current_branch = substr(colon_ptr + 2, -1);
         out->mode = NORMAL;
     } else {
-        oid_from_hex(&out->current_commit, line.buf);
+        oid_hex hex;
+        strncpy(hex.hex, line.buf, 64);
+        hex.hex[64] = '\0';
+        out->current_commit = oid_from_hex(&hex);
         out->mode = DETACHED;
     }
 
@@ -48,9 +51,8 @@ void write_head(head* head, repository* repo)
     if (head->mode == NORMAL) {
         fprintf(headfile, "ref: %s", head->current_branch);
     } else {
-        char* hex = oid_tostring(&head->current_commit);
-        fprintf(headfile, "%s", hex);
-        free(hex);
+        oid_hex hex = oid_tostring(&head->current_commit);
+        fprintf(headfile, "%s", hex.hex);
     }
 
     free(path);

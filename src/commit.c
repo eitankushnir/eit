@@ -2,6 +2,7 @@
 #include "object.h"
 #include "sha256.h"
 #include "strbuf.h"
+#include "tree.h"
 #include "wrappers.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -51,12 +52,14 @@ void set_message(commit* c, const char* msg)
     c->commit_message = substr(msg, -1);
 }
 
-void free_commit(commit *c) {
+void free_commit(commit* c)
+{
     free(c->committer_name);
     free(c->committer_email);
     free(c->author_name);
     free(c->author_email);
     free(c->parent_oids);
+    free(c->commit_message);
 }
 
 void write_commit(commit* c, repository* repo)
@@ -79,7 +82,7 @@ void write_commit(commit* c, repository* repo)
     write_object(OBJ_COMMIT, buffer, repo, &c->oid);
 }
 
-void parse_commit(const char* hex, commit* out, repository* repo)
+void parse_commit(const oid_hex* hex, commit* out, repository* repo)
 {
     init_commit(out);
     FILE* objfile = open_object(hex, repo);
@@ -107,7 +110,7 @@ void parse_commit(const char* hex, commit* out, repository* repo)
     while ((c = fgetc(objfile)) != ' ') {
         strbuf_addchr(&email, c);
     }
-    while (( c = fgetc(objfile)) != '\0') {
+    while ((c = fgetc(objfile)) != '\0') {
         strbuf_addchr(&name, c);
     }
     add_author(out, name.buf, email.buf, time);
@@ -121,7 +124,7 @@ void parse_commit(const char* hex, commit* out, repository* repo)
     while ((c = fgetc(objfile)) != ' ') {
         strbuf_addchr(&email, c);
     }
-    while (( c = fgetc(objfile)) != '\0') {
+    while ((c = fgetc(objfile)) != '\0') {
         strbuf_addchr(&name, c);
     }
 
@@ -130,7 +133,7 @@ void parse_commit(const char* hex, commit* out, repository* repo)
     strbuf_free(&email);
 
     strbuf commit_msg = STRBUF_INIT;
-    while (( c = fgetc(objfile)) != EOF) {
+    while ((c = fgetc(objfile)) != EOF) {
         strbuf_addchr(&commit_msg, c);
     }
 
@@ -140,22 +143,19 @@ void parse_commit(const char* hex, commit* out, repository* repo)
 
 void print_commit(commit* c)
 {
-    char* tree_hex = oid_tostring(&c->tree_oid);
-    printf("tree %s\n", tree_hex);
-    free(tree_hex);
+    oid_hex tree_hex = oid_tostring(&c->tree_oid);
+    printf("tree %s\n", tree_hex.hex);
 
     if (c->parent_count == 0) {
         printf("no parents\n");
     } else if (c->parent_count == 1) {
-        char* hex = oid_tostring(&c->parent_oids[0]);
-        printf("parent %s\n", hex);
-        free(hex);
+        oid_hex hex = oid_tostring(&c->parent_oids[0]);
+        printf("parent %s\n", hex.hex);
     } else {
         printf("parents ");
         for (unsigned int i = 0; i < c->parent_count; i++) {
-            char* hex = oid_tostring(&c->parent_oids[i]);
-            printf("%s ", hex);
-            free(hex);
+            oid_hex hex = oid_tostring(&c->parent_oids[i]);
+            printf("%s ", hex.hex);
         }
         printf("\n");
     }

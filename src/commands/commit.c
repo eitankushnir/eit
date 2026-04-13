@@ -63,6 +63,8 @@ int cmd_commit(char** argv, int argc, repository* repo)
 
     write_commit(&c, repo);
     update_head(repo, &c.oid);
+    free_commit(&c);
+    free_tree(&tree);
 
     return 0;
 }

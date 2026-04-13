@@ -11,7 +11,6 @@ typedef struct commit {
     char* author_name;
     char* author_email;
     unsigned int author_time;
-    
 
     char* committer_name;
     char* committer_email;
@@ -32,7 +31,7 @@ void set_message(commit* c, const char* msg);
 void free_commit(commit* c);
 
 void write_commit(commit* c, repository* repo);
-void parse_commit(const char* hex, commit* out, repository* repo);
+void parse_commit(const oid_hex* hex, commit* out, repository* repo);
 void print_commit(commit* c);
 
 void hash_commit(commit* c);

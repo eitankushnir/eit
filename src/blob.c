@@ -40,13 +40,14 @@ void hash_blob_from_file(FILE* f, object_id* out_oid, int write_to_store, reposi
     strbuf_free(&header);
 }
 
-void hash_blob_from_stdin(object_id *out_oid, int write_to_store, repository *repo) {
+void hash_blob_from_stdin(object_id* out_oid, int write_to_store, repository* repo)
+{
     // Copy stdin to tmpfile and use it to hash.
     FILE* tmp = tmpfile();
     char buf[4096];
     size_t len;
 
-    while (( len = fread(buf, 1, sizeof(buf), stdin))) {
+    while ((len = fread(buf, 1, sizeof(buf), stdin))) {
         fwrite(buf, 1, len, tmp);
     }
 
@@ -54,25 +55,29 @@ void hash_blob_from_stdin(object_id *out_oid, int write_to_store, repository *re
     fclose(tmp);
 }
 
-void print_blob(const char *hex, repository *repo) {
+void print_blob(const oid_hex* hex, repository* repo)
+{
     object_type type = get_type(hex, repo);
-    if (type != OBJ_BLOB) die("%s is not a valid blob object\n", hex);
+    if (type != OBJ_BLOB)
+        die("%s is not a valid blob object\n", hex->hex);
 
     FILE* objfile = open_object(hex, repo);
-    if (!objfile) die("Failed to read object %s\n", hex);
+    if (!objfile)
+        die("Failed to read object %s\n", hex->hex);
 
     // Get past the header.
     while (fgetc(objfile) != '\0') { }
 
     char* buf[4096];
     int len;
-    while (( len = fread(buf, 1, sizeof(buf) - 1, objfile))) {
+    while ((len = fread(buf, 1, sizeof(buf) - 1, objfile))) {
         buf[len - 1] = '\0';
         printf("%s", buf);
     }
 }
 
-void writeout_blob(const char *hex, repository *repo, const char *dest_path) {
+void writeout_blob(const oid_hex* hex, repository* repo, const char* dest_path)
+{
     FILE* objfile = open_object(hex, repo);
     FILE* dest = fopen(dest_path, "wb");
 
@@ -81,7 +86,7 @@ void writeout_blob(const char *hex, repository *repo, const char *dest_path) {
 
     char* buf[4096];
     int len;
-    while (( len = fread(buf, 1, sizeof(buf), objfile))) {
+    while ((len = fread(buf, 1, sizeof(buf), objfile))) {
         fwrite(buf, 1, len, dest);
     }
 }

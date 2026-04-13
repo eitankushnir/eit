@@ -2,6 +2,7 @@
 #include "commands.h"
 #include "commit.h"
 #include "object.h"
+#include "sha256.h"
 #include "strbuf.h"
 #include "tree.h"
 #include "wrappers.h"
@@ -49,7 +50,8 @@ int cmd_cat_file(char** argv, int argc, repository* repo)
         fprintf(stderr, "Error: Not enough arguments\n");
         return 1;
     }
-    char* hex;
+    char* hex_arg;
+    oid_hex hex;
     char* type = NULL;
     if (!cmd_opts.type_mode && !cmd_opts.pretty_print && !cmd_opts.size_mode) {
         if (argc != 2) {
@@ -58,17 +60,15 @@ int cmd_cat_file(char** argv, int argc, repository* repo)
         }
         type = argv[optind];
         type_from_name(type);
-        hex = argv[optind];
+        hex_arg = argv[optind];
     } else {
-        hex = argv[optind];
+        hex_arg = argv[optind];
     }
 
-    int free_short_hash = 0;
-    if (strlen(hex) > 64) {
+    if (strlen(hex_arg) > 64) {
         die("Error: a SHA-256 hash cannot extends 64 characters.\n");
-    } else if (strlen(hex) < 64) {
-        hex = complete_hash_hex(hex, repo);
-        free_short_hash = 1;
+    } else if (strlen(hex_arg) <= 64) {
+        hex = complete_hash_hex(hex_arg, repo);
     }
 
     if (cmd_opts.size_mode && cmd_opts.type_mode) {
@@ -76,9 +76,9 @@ int cmd_cat_file(char** argv, int argc, repository* repo)
         return 1;
     }
 
-    FILE* objfile = open_object(hex, repo);
+    FILE* objfile = open_object(&hex, repo);
     if (!objfile)
-        die("Failed to read object with hash: %s\n", hex);
+        die("Failed to read object with hash: %s\n", hex.hex);
     strbuf header = STRBUF_INIT;
     char c;
     while ((c = fgetc(objfile)) != '\0') {
@@ -97,29 +97,27 @@ int cmd_cat_file(char** argv, int argc, repository* repo)
         free(type_str);
     }
     if (cmd_opts.pretty_print) {
-        object_type type = get_type(hex, repo);
+        object_type type = get_type(&hex, repo);
         tree_node node;
         commit c;
         switch (type) {
         case OBJ_TREE:
-            parse_tree(hex, &node, repo);
+            parse_tree(&hex, &node, repo);
             print_tree(&node, repo);
             free_tree(&node);
             break;
         case OBJ_BLOB:
-            print_blob(hex, repo);
+            print_blob(&hex, repo);
             break;
         case OBJ_COMMIT:
-            parse_commit(hex, &c, repo);
+            parse_commit(&hex, &c, repo);
             print_commit(&c);
             free_commit(&c);
             break;
         default:
-            die("%s is not a valid object hash\n", hex);
+            die("%s is not a valid object hash\n", hex.hex);
         }
     }
     strbuf_free(&header);
-    if (free_short_hash)
-        free(hex);
     return 0;
 }

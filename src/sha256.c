@@ -210,33 +210,45 @@ void hash_stdin(object_id* out)
     sha256_final(&ctx, out);
 }
 
-char* oid_tostring(object_id* oid)
+oid_hex oid_tostring(object_id* oid)
 {
-    strbuf str = STRBUF_INIT;
+    static const char hex_chars[] = "0123456789abcdef";
+
+    oid_hex hex;
     for (int i = 0; i < 32; i++) {
-        strbuf_addf(&str, "%02x", oid->hash[i]); 
+        hex.hex[i * 2] = hex_chars[(oid->hash[i] >> 4) & 0x0F];
+        hex.hex[i * 2 + 1] = hex_chars[oid->hash[i] & 0x0F];
     }
-    return strbuf_detach(&str, 0);
+    hex.hex[64] = '\0';
+    return hex;
 }
 
-static int hex_char_to_int(char c) {
-    if (c >= '0' && c <= '9') return c - '0';
-    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
-    
+static int hex_char_to_int(char c)
+{
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    if (c >= 'a' && c <= 'f')
+        return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F')
+        return c - 'A' + 10;
+
     die("Invalid hex char: %c\n", c);
     return -1;
 }
 
-void oid_from_hex(object_id *out, const char *hex) {
-    if (!hex || strlen(hex) != 64) {
-        die("Invalid hex %s\n", hex);
+object_id oid_from_hex(const oid_hex* hex)
+{
+    object_id oid;
+    if (!hex) {
+        die("no hex passed :(");
     }
 
     for (int i = 0; i < 32; i++) {
-        int high = hex_char_to_int(hex[i * 2]);
-        int low = hex_char_to_int(hex[i * 2 + 1]);
+        int high = hex_char_to_int(hex->hex[i * 2]);
+        int low = hex_char_to_int(hex->hex[i * 2 + 1]);
 
-        out->hash[i] = (uint8_t)((high << 4) | low);
+        oid.hash[i] = (uint8_t)((high << 4) | low);
     }
+
+    return oid;
 }

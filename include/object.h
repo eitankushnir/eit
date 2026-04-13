@@ -30,8 +30,8 @@ const char* type_name(object_type type);
 object_type type_from_name(char* name);
 
 void write_object(object_type type, FILE* src, repository* repo, object_id* out_oid);
-char* complete_hash_hex(const char* short_hash, repository* repo);
-FILE* open_object(const char* hex_oid, repository* repo);
-object_type get_type(const char* hex_oid, repository* repo);
+oid_hex complete_hash_hex(const char* short_hash, repository* repo);
+FILE* open_object(const oid_hex* hex, repository* repo);
+object_type get_type(const oid_hex* hex, repository* repo);
 
 #endif

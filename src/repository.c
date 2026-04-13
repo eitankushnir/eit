@@ -215,19 +215,17 @@ void swap_stage(repository* repo, struct stage* new_stage)
             i++;
         } else if (cmp > 0) {
             mkpath(repo, curr_new->path);
-            char* curr_new_hex = oid_tostring(&curr_new->oid);
-            writeout_blob(curr_new_hex, repo, curr_new->path);
+            oid_hex curr_new_hex = oid_tostring(&curr_new->oid);
+            writeout_blob(&curr_new_hex, repo, curr_new->path);
             j++;
         } else {
-            char* curr_repo_hex = oid_tostring(&curr_repo->oid);
-            char* curr_new_hex = oid_tostring(&curr_new->oid);
-            if (strcmp(curr_repo_hex, curr_new_hex) != 0) {
+            oid_hex curr_repo_hex = oid_tostring(&curr_repo->oid);
+            oid_hex curr_new_hex = oid_tostring(&curr_new->oid);
+            if (strcmp(curr_repo_hex.hex, curr_new_hex.hex) != 0) {
                 mkpath(repo, curr_new->path);
-                writeout_blob(curr_new_hex, repo, curr_new->path);
+                writeout_blob(&curr_new_hex, repo, curr_new->path);
             }
 
-            free(curr_repo_hex);
-            free(curr_new_hex);
             i++;
             j++;
         }
@@ -237,8 +235,8 @@ void swap_stage(repository* repo, struct stage* new_stage)
     while (j < new_stage->entry_count) {
         stage_entry* curr_new = new_stage->entries[j];
         mkpath(repo, curr_new->path);
-        char* curr_new_hex = oid_tostring(&curr_new->oid);
-        writeout_blob(curr_new_hex, repo, curr_new->path);
+        oid_hex curr_new_hex = oid_tostring(&curr_new->oid);
+        writeout_blob(&curr_new_hex, repo, curr_new->path);
         j++;
     }
 

@@ -15,15 +15,18 @@ typedef struct {
     uint8_t hash[32];
 } object_id;
 
+typedef struct {
+    char hex[65];
+} oid_hex;
 
 void sha256_init(SHA256_CTX* ctx);
-void sha256_update(SHA256_CTX* ctx, const uint8_t *data, size_t len);
-void sha256_final(SHA256_CTX *ctx, object_id* out);
+void sha256_update(SHA256_CTX* ctx, const uint8_t* data, size_t len);
+void sha256_final(SHA256_CTX* ctx, object_id* out);
 
 void oidcpy(object_id* dest, object_id* src);
 void println_oid(object_id* oid);
-char* oid_tostring(object_id* oid);
-void oid_from_hex(object_id* out, const char* hex);
+oid_hex oid_tostring(object_id* oid);
+object_id oid_from_hex(const oid_hex* hex);
 
 void hash_file(FILE* f, object_id* out);
 void hash_stdin(object_id* out);

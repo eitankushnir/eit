@@ -92,13 +92,19 @@ int strbuf_read_file_line(strbuf* sb, FILE* file)
         return -1;
 
     char buf[4096];
-    do {
-        char* result = fgets(buf, sizeof(buf), file);
-        if (result == NULL) {
-            return -1;
-        }
-    } while (buf[strlen(buf) - 1] != '\n');
+    int read_something = 0;
+    while (fgets(buf, sizeof(buf), file) != NULL) {
+        read_something = 1;
+        strbuf_addstr(sb, buf);
 
-    strbuf_addstr(sb, buf);
+        if (buf[strlen(buf) - 1] == '\n') {
+            break;
+        }
+    }
+
+    if (!read_something) {
+        return -1;
+    }
+
     return 0;
 }

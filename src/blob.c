@@ -68,7 +68,7 @@ void print_blob(const oid_hex* hex, repository* repo)
     // Get past the header.
     while (fgetc(objfile) != '\0') { }
 
-    char* buf[4096];
+    char buf[4096];
     int len;
     while ((len = fread(buf, 1, sizeof(buf) - 1, objfile))) {
         buf[len - 1] = '\0';

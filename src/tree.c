@@ -157,6 +157,7 @@ void parse_tree(const oid_hex* hex, tree_node* out_node, repository* repo)
 
     while (1) {
         tree_node* child = xmalloc(1, tree_node);
+        init_root(child);
         int res = fscanf(objfile, "%o", &child->mode);
         if (res != 1) {
             free(child);
@@ -172,7 +173,7 @@ void parse_tree(const oid_hex* hex, tree_node* out_node, repository* repo)
         }
         child->name = strbuf_detach(&name, 0);
         child->parsed = 1;
-        out_node->child_count++;
+        increase_array(out_node);
         out_node->children[out_node->child_count - 1] = child;
     }
 }

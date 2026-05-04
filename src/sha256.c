@@ -195,3 +195,12 @@ int hex_to_oid(struct hex_oid *hex, struct object_id *out) {
 
   return 0;
 }
+
+int oideq(struct object_id *a, struct object_id *b) {
+  for (int i = 0; i < 32; i++) {
+    if (a->hash[i] != b->hash[i])
+      return 0;
+  }
+
+  return 1;
+}

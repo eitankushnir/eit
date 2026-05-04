@@ -38,4 +38,6 @@ char *oid_to_hex(struct object_id *oid, struct hex_oid *out);
 // Returns -1 on invalid strings.
 // Returns 0 on success.
 int hex_to_oid(struct hex_oid *hex, struct object_id *out);
+
+int oideq(struct object_id *a, struct object_id *b);
 #endif

@@ -1,5 +1,6 @@
 #include "repository.h"
 #include "helper.h"
+#include "object_store.h"
 #include "strbuf.h"
 #include <dirent.h>
 #include <stdlib.h>
@@ -10,6 +11,7 @@
 void repository_init(struct repository *repo) {
   repo->repodir = NULL;
   repo->worktree = NULL;
+  repo->objects = NULL;
 }
 
 void repository_release(struct repository *repo) {
@@ -64,4 +66,17 @@ char *repo_find_repo_worktree() {
 
   strbuf_addstr(&worktree, repodir);
   return strbuf_truncate(&worktree, last_index_of(worktree.buf, '/'));
+}
+
+struct object_store *repo_get_object_store(struct repository *repo) {
+  if (repo->objects)
+    return repo->objects;
+
+  // allocate (lazy init)
+
+  struct strbuf object_storage_loc = STRBUF_INIT;
+  strbuf_addf(&object_storage_loc, "%s/%s", repo->repodir, "objects");
+  repo->objects = object_store_new(object_storage_loc.buf);
+  strbuf_release(&object_storage_loc);
+  return repo->objects;
 }

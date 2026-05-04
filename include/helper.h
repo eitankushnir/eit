@@ -15,4 +15,10 @@ void *_xrealloc(void *ptr, size_t num, size_t size);
 void create_directory(const char *path);
 int create_directory_gently(const char *path);
 
+int index_of(const char *str, char c);
+int last_index_of(const char *str, char c);
+
+// Return a malloc'd string of the absolute path.
+char *normalize_path(const char *path);
+
 #endif

@@ -6,13 +6,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-void strbuf_init(strbuf *sb) {
+void strbuf_init(struct strbuf *sb) {
   sb->buf = NULL;
   sb->alloc = 0;
   sb->len = 0;
 }
 
-void strbuf_release(strbuf *sb) {
+void strbuf_release(struct strbuf *sb) {
   if (sb->buf)
     free(sb->buf);
 
@@ -21,7 +21,7 @@ void strbuf_release(strbuf *sb) {
   sb->len = 0;
 }
 
-char *strbuf_addstr(strbuf *sb, const char *str) {
+char *strbuf_addstr(struct strbuf *sb, const char *str) {
   if (sb->alloc == 0) {
     sb->buf = xmalloc(STRBUF_INIT_ALLOC_SIZE, char);
     sb->alloc = STRBUF_INIT_ALLOC_SIZE;
@@ -41,7 +41,7 @@ char *strbuf_addstr(strbuf *sb, const char *str) {
   return sb->buf;
 }
 
-char *strbuf_addf(strbuf *sb, const char *format, ...) {
+char *strbuf_addf(struct strbuf *sb, const char *format, ...) {
   va_list vargs;
   va_start(vargs, format);
   size_t len = vsnprintf(NULL, 0, format, vargs);
@@ -54,5 +54,14 @@ char *strbuf_addf(strbuf *sb, const char *format, ...) {
   strbuf_addstr(sb, finished_string);
   free(finished_string);
 
+  return sb->buf;
+}
+
+char *strbuf_truncate(struct strbuf *sb, size_t index) {
+  if (index > sb->len)
+    return NULL;
+
+  sb->buf[index] = '\0';
+  sb->len = index;
   return sb->buf;
 }

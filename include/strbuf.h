@@ -4,21 +4,23 @@
 #include <stddef.h>
 
 #define STRBUF_INIT_ALLOC_SIZE 80
-typedef struct {
+struct strbuf {
   char *buf;    // The string buffer.
   size_t len;   // The length of the string.
   size_t alloc; // The number of bytes allocated.
-} strbuf;
+};
 
 #define STRBUF_INIT {.buf = NULL, .len = 0, .alloc = 0}
 
-void strbuf_init(strbuf *sb);
-void strbuf_release(strbuf *sb);
+void strbuf_init(struct strbuf *sb);
+void strbuf_release(struct strbuf *sb);
 
 // Append a string to the strbuf buffer.
 // Returns a pointer to the string.
-char *strbuf_addstr(strbuf *sb, const char *str);
-char *strbuf_addf(strbuf *sb, const char *format, ...)
+char *strbuf_addstr(struct strbuf *sb, const char *str);
+char *strbuf_addf(struct strbuf *sb, const char *format, ...)
     __attribute__((format(printf, 2, 3)));
+
+char *strbuf_truncate(struct strbuf *sb, size_t index);
 
 #endif

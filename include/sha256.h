@@ -12,14 +12,14 @@ typedef struct {
 } SHA256_CTX;
 
 // Stores the raw bytes of the sha256 hash.
-typedef struct {
+struct object_id {
   uint8_t hash[32];
-} object_id;
+};
 
 // Stores the human-readable hexidecimal rep. of a sha256 hash.
-typedef struct {
+struct hex_oid {
   char hex[65];
-} hex_oid;
+};
 
 // Initialize the context struct.
 void sha256_init(SHA256_CTX *ctx);
@@ -28,14 +28,14 @@ void sha256_init(SHA256_CTX *ctx);
 void sha256_update(SHA256_CTX *ctx, const uint8_t *data, size_t len);
 
 // Compute the sha256 hash with all the data fed via sha256_update.
-void sha256_final(SHA256_CTX *ctx, object_id *out);
+void sha256_final(SHA256_CTX *ctx, struct object_id *out);
 
 // Conversion between raw bytes to human readable string.
 // Returns a pointer to the string inside the given hex_oid struct.
-char *oid_to_hex(object_id *oid, hex_oid *out);
+char *oid_to_hex(struct object_id *oid, struct hex_oid *out);
 
 // Conversion between human readable string to raw bytes.
 // Returns -1 on invalid strings.
 // Returns 0 on success.
-int hex_to_oid(hex_oid *hex, object_id *out);
+int hex_to_oid(struct hex_oid *hex, struct object_id *out);
 #endif

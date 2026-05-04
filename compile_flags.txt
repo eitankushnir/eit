@@ -1,5 +1,5 @@
 -xc
--std=c11
+-std=c23
 -Iinclude
 -Wall
 -Wextra

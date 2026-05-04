@@ -108,7 +108,7 @@ void sha256_update(SHA256_CTX *ctx, const uint8_t *data, size_t len) {
   }
 }
 
-void sha256_final(SHA256_CTX *ctx, object_id *out) {
+void sha256_final(SHA256_CTX *ctx, struct object_id *out) {
   // Capture the length of the final remaining chunk.
   ctx->bitlen += ctx->datalen * 8;
 
@@ -155,7 +155,7 @@ void sha256_final(SHA256_CTX *ctx, object_id *out) {
   }
 }
 
-char *oid_to_hex(object_id *oid, hex_oid *out) {
+char *oid_to_hex(struct object_id *oid, struct hex_oid *out) {
   static const char hex_chars[] = "0123456789abcdef";
   for (int i = 0; i < 32; i++) {
     out->hex[i * 2] = hex_chars[(oid->hash[i] >> 4) & 0x0F];
@@ -177,7 +177,7 @@ static int hex_char_to_int(char c) {
   return -1;
 }
 
-int hex_to_oid(hex_oid *hex, object_id *out) {
+int hex_to_oid(struct hex_oid *hex, struct object_id *out) {
   if (!hex) {
     return -1;
   }

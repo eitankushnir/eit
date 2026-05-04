@@ -1,0 +1,67 @@
+#include "repository.h"
+#include "helper.h"
+#include "strbuf.h"
+#include <dirent.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+void repository_init(struct repository *repo) {
+  repo->repodir = NULL;
+  repo->worktree = NULL;
+}
+
+void repository_release(struct repository *repo) {
+  if (repo->repodir)
+    free(repo->repodir);
+
+  if (repo->worktree)
+    free(repo->worktree);
+}
+
+char *repo_find_repo_dir() {
+
+  char *repo_dir_path = NULL;
+  struct strbuf current_path = STRBUF_INIT;
+  strbuf_addstr(&current_path, ".");
+
+  while (true) {
+
+    strbuf_addf(&current_path, "/%s", REPO_DIR_NAME);
+    struct stat st_repodir;
+    if (stat(current_path.buf, &st_repodir) == 0 &&
+        S_ISDIR(st_repodir.st_mode)) {
+
+      repo_dir_path = normalize_path(current_path.buf);
+      break;
+    }
+
+    int last_slash = last_index_of(current_path.buf, '/');
+    strbuf_truncate(&current_path, last_slash);
+
+    struct stat current, parent;
+    if (stat(current_path.buf, &current) != 0)
+      break;
+    strbuf_addstr(&current_path, "/..");
+    if (stat(current_path.buf, &parent) != 0)
+      break;
+
+    if (current.st_dev == parent.st_dev && current.st_ino == parent.st_ino)
+      break;
+  }
+
+  strbuf_release(&current_path);
+  return repo_dir_path;
+}
+
+char *repo_find_repo_worktree() {
+  char *repodir = repo_find_repo_dir();
+  if (!repodir)
+    return NULL;
+
+  struct strbuf worktree = STRBUF_INIT;
+
+  strbuf_addstr(&worktree, repodir);
+  return strbuf_truncate(&worktree, last_index_of(worktree.buf, '/'));
+}

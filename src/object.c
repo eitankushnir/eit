@@ -61,8 +61,8 @@ void parsed_object_pool_insert(struct parsed_object_pool *pool,
   pool->buckets[index] = new_bucket;
 }
 
-struct object *find_object(struct parsed_object_pool *pool,
-                           struct object_id *oid) {
+struct object *lookup_object(struct parsed_object_pool *pool,
+                             struct object_id *oid) {
 
   size_t first_bytes;
   memcpy(&first_bytes, oid->hash, sizeof(size_t));
@@ -79,6 +79,11 @@ struct object *find_object(struct parsed_object_pool *pool,
 
     bucket = bucket->next;
   }
+
+  // No object, create a fakey so it can be parsed later on.
+  struct object *stub = xmalloc(1, struct object);
+  stub->parsed = 0;
+  stub->oid = *oid;
 
   return NULL;
 }

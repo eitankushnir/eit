@@ -26,11 +26,10 @@ struct object {
 //   struct object_bucket **buckets;
 // };
 //
-// static const char *object_type_names[] = {"unknown", "blob", "tree",
-// "commit"};
-//
-// const char *object_type_to_string(enum object_type type);
-// enum object_type string_to_object_type(const char *s);
+static const char *object_type_names[] = {"unknown", "blob", "tree", "commit"};
+
+const char *object_type_to_string(enum object_type type);
+enum object_type string_to_object_type(const char *s);
 //
 // // OBJ POOL STUFF
 //

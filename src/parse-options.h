@@ -4,10 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 enum option_type {
-  OPT_END,     // Signals the end of an options array.
+  OPT_END = 0, // Signals the end of an options array.
   OPT_SET_INT, // No arguement, will set *value to an integer
-  OPT_HELP,    // Prints out help info. Command will not do anything else if an
-               // option like this is present.
 
   OPT_INT,
   OPT_STRING,
@@ -32,6 +30,49 @@ struct option {
   char *help; // Help message of what the option does.
 };
 
+#define MKOPT_STRING(ln, sn, val, ah, h)                                       \
+  {.long_name = (ln),                                                          \
+   .short_name = (sn),                                                         \
+   .type = OPT_STRING,                                                         \
+   .value = &(val),                                                            \
+   .defval = 0,                                                                \
+   .flags = OPT_NONEG | OPT_HASARG,                                            \
+   .argh = (ah),                                                               \
+   .help = (h)}
+
+#define MKOPT_END                                                              \
+  {.long_name = NULL,                                                          \
+   .short_name = 0,                                                            \
+   .type = OPT_END,                                                            \
+   .value = NULL,                                                              \
+   .defval = 0,                                                                \
+   .flags = 0,                                                                 \
+   .argh = NULL,                                                               \
+   .help = NULL}
+
+#define MKOPT_INT(ln, sn, val, ah, h)                                          \
+  {.long_name = (ln),                                                          \
+   .short_name = (sn),                                                         \
+   .type = OPT_INT,                                                            \
+   .value = &(val),                                                            \
+   .defval = 0,                                                                \
+   .flags = OPT_NONEG | OPT_HASARG,                                            \
+   .argh = (ah),                                                               \
+   .help = (h)}
+
+#define MKOPT_SET_INT_F(ln, sn, val, def, h, f)                                \
+  {.long_name = (ln),                                                          \
+   .short_name = (sn),                                                         \
+   .type = OPT_SET_INT,                                                        \
+   .value = &(val),                                                            \
+   .defval = (def),                                                            \
+   .flags = OPT_NOARG | (f),                                                   \
+   .argh = NULL,                                                               \
+   .help = (h)}
+
+#define MKOPT_BOOL_F(ln, sn, val, h, f) MKOPT_SET_INT_F(ln, sn, val, 1, h, f)
+#define MKOPT_BOOL(ln, sn, val, h) MKOPT_BOOL_F(ln, sn, val, h, 0)
+
 /*
  * Parse the argument vector using the provided options.
  * usagestr is a NULL-terminated array of string to print out usage incase of
@@ -45,4 +86,5 @@ struct option {
  * Will die on any error.
  */
 int parse_options(int argc, char **argv, struct option *opts, char **usagestr);
+
 #endif

@@ -148,3 +148,33 @@ int object_store_write_file(struct object_store *store, enum object_type type,
     return -1;
   }
 }
+
+void *object_store_read_raw(struct object_store *store, struct object_id *oid,
+                            size_t *out_size, enum object_type *out_type) {
+  char *path = oid_to_path(store, oid);
+  FILE *objfile = fopen(path, "rb");
+
+  if (!objfile) {
+    struct hex_oid hex;
+    die("Error: failed to read object with id %s", oid_to_hex(oid, &hex));
+  }
+
+  char type_name[10]; // no type name is larger than 9 chars.
+
+  fscanf(objfile, "%s %zu", type_name, out_size);
+  *out_type = string_to_object_type(type_name);
+  fgetc(objfile); // get past the null-terminator of the header.
+
+  void *data = xmalloc(*out_size, uint8_t);
+  size_t result = fread(data, sizeof(uint8_t), *out_size, objfile);
+
+  if (result < *out_size) {
+
+    struct hex_oid hex;
+    die("Error: object length in header does not match file size for object "
+        "%s",
+        oid_to_hex(oid, &hex));
+  }
+
+  return data;
+}

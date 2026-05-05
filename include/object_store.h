@@ -41,4 +41,13 @@ int object_store_write_file(struct object_store *store, enum object_type type,
                             const char *path, struct object_id *out_oid,
                             int write_to_disk);
 
+/*
+ * Returns the raw bytes stored in object with id oid.
+ * set out_type to the object type and sets out_size to the number of bytes
+ * stored.
+ * Will die on object that are corrupted.
+ * If the object is empty (could happen for empty blobs) NULL is returned.
+ */
+void *object_store_read_raw(struct object_store *store, struct object_id *oid,
+                            size_t *out_size, enum object_type *out_type);
 #endif

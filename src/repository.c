@@ -4,13 +4,12 @@
 #include "strbuf.h"
 #include <dirent.h>
 #include <stdlib.h>
-#include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
 void repository_init(struct repository *repo) {
-  repo->repodir = NULL;
-  repo->worktree = NULL;
+  repo->repodir = repo_find_repo_dir();
+  repo->worktree = repo_find_repo_worktree();
   repo->objects = NULL;
 }
 

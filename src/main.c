@@ -1,11 +1,5 @@
 #include "command.h"
-#include "helper.h"
-#include "object.h"
-#include "object_store.h"
-#include "parse-options.h"
 #include "repository.h"
-#include "sha256.h"
-#include "strbuf.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>

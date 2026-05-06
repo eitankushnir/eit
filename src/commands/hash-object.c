@@ -1,5 +1,4 @@
 #include "command.h"
-#include "helper.h"
 #include "object.h"
 #include "object_store.h"
 #include "parse-options.h"

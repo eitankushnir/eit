@@ -13,7 +13,8 @@
 #include <string.h>
 
 static struct command commands[] = {
-
+    {"init", cmd_init},
+    {"hash-object", cmd_hash_object},
 };
 
 int main(int argc, char **argv) {
@@ -28,10 +29,14 @@ int main(int argc, char **argv) {
   struct repository repo;
   repository_init(&repo);
   for (size_t i = 0; i < command_nr; i++) {
-    if (strcmp(command, commands[i].name) == 0)
-      return commands[i].fn(argc - 1, argv + 1, &repo);
+    if (strcmp(command, commands[i].name) == 0) {
+      int result = commands[i].fn(argc - 1, argv + 1, &repo);
+      repository_release(&repo);
+      return result;
+    }
   }
 
   printf("Unkown command: %s\n", command);
+  repository_release(&repo);
   return 1;
 }

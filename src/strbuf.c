@@ -57,6 +57,25 @@ char *strbuf_addf(struct strbuf *sb, const char *format, ...) {
   return sb->buf;
 }
 
+char *strbuf_addraw(struct strbuf *sb, void *buf, size_t len) {
+  if (sb->alloc == 0) {
+    sb->buf = xmalloc(STRBUF_INIT_ALLOC_SIZE, char);
+    sb->alloc = STRBUF_INIT_ALLOC_SIZE;
+  }
+
+  if (sb->alloc < sb->len + len + 1) {
+    size_t new_alloc = (sb->len + len + 1) * 2;
+    sb->buf = xrealloc(sb->buf, new_alloc, char);
+    sb->alloc = new_alloc;
+  }
+
+  memcpy(sb->buf + sb->len, buf, len);
+  sb->len = sb->len + len;
+  sb->buf[sb->len] = '\0';
+
+  return sb->buf;
+}
+
 char *strbuf_truncate(struct strbuf *sb, size_t index) {
   if (index > sb->len)
     return NULL;

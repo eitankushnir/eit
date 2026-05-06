@@ -21,6 +21,8 @@ char *strbuf_addstr(struct strbuf *sb, const char *str);
 char *strbuf_addf(struct strbuf *sb, const char *format, ...)
     __attribute__((format(printf, 2, 3)));
 
+char *strbuf_addraw(struct strbuf *sb, void *buf, size_t len);
+
 char *strbuf_truncate(struct strbuf *sb, size_t index);
 
 #endif

@@ -40,7 +40,7 @@ void *_xcalloc(size_t num, size_t size) {
 
 void *_xrealloc(void *ptr, size_t num, size_t size) {
   void *new_ptr = realloc(ptr, size * num);
-  if (!ptr) {
+  if (!new_ptr) {
     die("Fatal: Failed to reallocate %zu bytes", num * size);
   }
 

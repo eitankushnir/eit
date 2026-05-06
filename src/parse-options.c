@@ -120,7 +120,7 @@ static struct option *find_long_option(char *arg, struct option *options,
 
   char *name = neg ? neg + 3 : arg + 2;
   while (options[i].type != OPT_END) {
-    if (strcmp(name, options[i].long_name) == 0) {
+    if (options[i].long_name && strcmp(name, options[i].long_name) == 0) {
       if (eq)
         *eq = '=';
       return &options[i];
@@ -288,6 +288,9 @@ static void print_help(struct option *opts, char **usagestr) {
     printf("%s\n", usagestr[i]);
     i++;
   }
+
+  if (!opts)
+    return;
 
   i = 0;
   int off = get_longest_name(opts) + 8;

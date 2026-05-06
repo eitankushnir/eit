@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
-#include <unistd.h>
 
 void object_store_free(struct object_store *store) {
   free(store->objectsdir);

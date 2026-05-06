@@ -4,6 +4,7 @@
 #include "strbuf.h"
 #include <dirent.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 
 void repository_init(struct repository *repo) {
@@ -65,6 +66,10 @@ char *repo_find_repo_worktree() {
   strbuf_addstr(&worktree, repodir);
   free(repodir);
   return strbuf_truncate(&worktree, last_index_of(worktree.buf, '/'));
+}
+
+int repo_is_path_inside(struct repository *repo, const char *path) {
+  return strstr(path, repo->repodir) != NULL;
 }
 
 struct object_store *repo_get_object_store(struct repository *repo) {

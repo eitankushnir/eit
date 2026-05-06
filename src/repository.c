@@ -64,6 +64,7 @@ char *repo_find_repo_worktree() {
   struct strbuf worktree = STRBUF_INIT;
 
   strbuf_addstr(&worktree, repodir);
+  free(repodir);
   return strbuf_truncate(&worktree, last_index_of(worktree.buf, '/'));
 }
 

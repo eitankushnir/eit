@@ -5,7 +5,6 @@
 #include <dirent.h>
 #include <stdlib.h>
 #include <sys/stat.h>
-#include <unistd.h>
 
 void repository_init(struct repository *repo) {
   repo->repodir = repo_find_repo_dir();

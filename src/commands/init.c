@@ -5,7 +5,6 @@
 #include "strbuf.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 
 static void remake_dir(struct strbuf *sb, char *d) {
   strbuf_release(sb);

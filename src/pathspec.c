@@ -25,6 +25,11 @@ void resolved_pathspec_free(struct resolved_pathspec *rp) {
 static char **get_all_subentries(const char *path, size_t *out_n,
                                  filter dont_go_in, void *userdata,
                                  int *is_dir) {
+  if (dont_go_in(path, userdata)) {
+    *is_dir = 0;
+    *out_n = 0;
+    return NULL;
+  }
 
   DIR *dir = opendir(path);
   if (!dir) {
@@ -49,10 +54,6 @@ static char **get_all_subentries(const char *path, size_t *out_n,
       continue;
     struct strbuf entpath = STRBUF_INIT;
     strbuf_addf(&entpath, "%s/%s", path, ent->d_name);
-    if (dont_go_in(entpath.buf, userdata)) {
-      strbuf_release(&entpath);
-      continue;
-    }
 
     struct stat st;
     if (stat(entpath.buf, &st) != 0) {
@@ -81,9 +82,11 @@ static char **get_all_subentries(const char *path, size_t *out_n,
       }
       strbuf_release(&entpath);
       free(moremore);
-    } else {
+    } else if (!dont_go_in(entpath.buf, userdata)) {
       paths = xrealloc(paths, ++curr_len, char *);
       paths[curr_len - 1] = entpath.buf;
+    } else {
+      strbuf_release(&entpath);
     }
   }
 
@@ -98,26 +101,27 @@ struct resolved_pathspec *resolve_pathspec(const char *pathspec, filter filter,
                                            void *userdata) {
 
   char *copy = strdup(pathspec);
-  char *last = strpbrk(copy, "?*[]");
+  char *glob = strpbrk(copy, "?*[]");
 
   char **paths;
   struct strbuf pattern = STRBUF_INIT;
   size_t n;
   int is_dir = 0;
-  if (!last) {
+  int no_slash = last_index_of(copy, '/') == -1;
+  if (!glob) {
     paths = get_all_subentries(pathspec, &n, filter, userdata, &is_dir);
     strbuf_addstr(&pattern, pathspec);
     if (is_dir)
       strbuf_addstr(&pattern, "/*");
   } else {
-    char temp = *last;
-    *last = '\0';
+    char temp = *glob;
+    *glob = '\0';
     int last_slash = last_index_of(copy, '/');
-    *last = temp;
+    *glob = temp;
 
     if (last_slash == -1) {
       paths = get_all_subentries(".", &n, filter, userdata, &is_dir);
-      strbuf_addf(&pattern, "./%s", pathspec);
+      strbuf_addf(&pattern, "%s", pathspec);
     } else {
       copy[last_slash] = '\0';
       paths = get_all_subentries(copy, &n, filter, userdata, &is_dir);
@@ -127,7 +131,10 @@ struct resolved_pathspec *resolve_pathspec(const char *pathspec, filter filter,
 
   struct resolved_pathspec *rp = xcalloc(1, struct resolved_pathspec);
   for (size_t i = 0; i < n; i++) {
-    int should_add = fnmatch(pattern.buf, paths[i], 0) == 0;
+    char *tomatch = paths[i];
+    if (no_slash && glob)
+      tomatch = basename_inplace(paths[i]);
+    int should_add = fnmatch(pattern.buf, tomatch, 0) == 0;
     if (should_add) {
       rp->matching_paths = xrealloc(rp->matching_paths, ++rp->nr, char *);
       rp->matching_paths[rp->nr - 1] = normalize_path(paths[i]);

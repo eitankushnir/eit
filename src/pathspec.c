@@ -117,7 +117,6 @@ struct resolved_pathspec *resolve_pathspec(const char *pathspec,
   struct resolved_pathspec *rp = xcalloc(1, struct resolved_pathspec);
   for (size_t i = 0; i < n; i++) {
     int should_add = fnmatch(pattern.buf, paths[i], 0) == 0;
-    printf("%s\n", paths[i]);
     if (should_add) {
       rp->matching_paths = xrealloc(rp->matching_paths, ++rp->nr, char *);
       rp->matching_paths[rp->nr - 1] = normalize_path(paths[i]);
@@ -129,9 +128,5 @@ struct resolved_pathspec *resolve_pathspec(const char *pathspec,
   strbuf_release(&pattern);
 
   qsort(rp->matching_paths, rp->nr, sizeof(char *), cmp);
-  for (size_t i = 0; i < rp->nr; i++) {
-    printf("%s\n", rp->matching_paths[i]);
-  }
-
   return rp;
 }

@@ -22,7 +22,8 @@ void resolved_pathspec_free(struct resolved_pathspec *rp) {
   free(rp);
 }
 
-static char **get_all_subentries(const char *path, size_t *out_n) {
+static char **get_all_subentries(const char *path, size_t *out_n,
+                                 filter dont_go_in) {
 
   DIR *dir = opendir(path);
   if (!dir) {
@@ -42,7 +43,8 @@ static char **get_all_subentries(const char *path, size_t *out_n) {
   char **paths = NULL;
   size_t curr_len = 0;
   while ((ent = readdir(dir))) {
-    if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+    if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0 ||
+        (dont_go_in && dont_go_in(ent->d_name)))
       continue;
     struct strbuf entpath = STRBUF_INIT;
     strbuf_addf(&entpath, "%s/%s", path, ent->d_name);
@@ -61,7 +63,7 @@ static char **get_all_subentries(const char *path, size_t *out_n) {
 
     if (S_ISDIR(st.st_mode)) {
       size_t more;
-      char **moremore = get_all_subentries(entpath.buf, &more);
+      char **moremore = get_all_subentries(entpath.buf, &more, dont_go_in);
 
       if (more > 0) {
         paths = xrealloc(paths, curr_len + more, char *);
@@ -84,7 +86,8 @@ static char **get_all_subentries(const char *path, size_t *out_n) {
   return paths;
 }
 
-struct resolved_pathspec *resolve_pathspec(const char *pathspec) {
+struct resolved_pathspec *resolve_pathspec(const char *pathspec,
+                                           filter filter) {
 
   char *copy = strdup(pathspec);
   char *last = strpbrk(copy, "?*[]");
@@ -93,7 +96,7 @@ struct resolved_pathspec *resolve_pathspec(const char *pathspec) {
   struct strbuf pattern = STRBUF_INIT;
   size_t n;
   if (!last) {
-    paths = get_all_subentries(pathspec, &n);
+    paths = get_all_subentries(pathspec, &n, filter);
     strbuf_addstr(&pattern, pathspec);
   } else {
     char temp = *last;
@@ -102,11 +105,11 @@ struct resolved_pathspec *resolve_pathspec(const char *pathspec) {
     *last = temp;
 
     if (last_slash == -1) {
-      paths = get_all_subentries(".", &n);
+      paths = get_all_subentries(".", &n, filter);
       strbuf_addf(&pattern, "./%s", pathspec);
     } else {
       copy[last_slash] = '\0';
-      paths = get_all_subentries(copy, &n);
+      paths = get_all_subentries(copy, &n, filter);
       strbuf_addstr(&pattern, pathspec);
     }
   }

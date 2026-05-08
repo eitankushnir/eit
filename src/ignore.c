@@ -51,7 +51,7 @@ void ignores_free(struct ignores *ignores) {
 int ignores_is_ignored(struct ignores *ignores, const char *path) {
   char *abs = normalize_path(path);
   // Ignores are relative to their location.
-  if (strstr(abs, ignores->loc) != abs) {
+  if (!ignores || strstr(abs, ignores->loc) != abs) {
     free(abs);
     return 0;
   }

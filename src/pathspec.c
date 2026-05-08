@@ -23,10 +23,12 @@ void resolved_pathspec_free(struct resolved_pathspec *rp) {
 }
 
 static char **get_all_subentries(const char *path, size_t *out_n,
-                                 filter dont_go_in) {
+                                 filter dont_go_in, void *userdata,
+                                 int *is_dir) {
 
   DIR *dir = opendir(path);
   if (!dir) {
+    *is_dir = 0;
     struct stat st;
     if (stat(path, &st) == 0) {
       char **paths = xmalloc(1, char *);
@@ -43,11 +45,14 @@ static char **get_all_subentries(const char *path, size_t *out_n,
   char **paths = NULL;
   size_t curr_len = 0;
   while ((ent = readdir(dir))) {
-    if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0 ||
-        (dont_go_in && dont_go_in(ent->d_name)))
+    if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
       continue;
     struct strbuf entpath = STRBUF_INIT;
     strbuf_addf(&entpath, "%s/%s", path, ent->d_name);
+    if (dont_go_in(entpath.buf, userdata)) {
+      strbuf_release(&entpath);
+      continue;
+    }
 
     struct stat st;
     if (stat(entpath.buf, &st) != 0) {
@@ -58,12 +63,14 @@ static char **get_all_subentries(const char *path, size_t *out_n,
       free(paths);
       *out_n = 0;
       closedir(dir);
+      *is_dir = 1;
       return NULL;
     }
 
     if (S_ISDIR(st.st_mode)) {
       size_t more;
-      char **moremore = get_all_subentries(entpath.buf, &more, dont_go_in);
+      char **moremore =
+          get_all_subentries(entpath.buf, &more, dont_go_in, userdata, is_dir);
 
       if (more > 0) {
         paths = xrealloc(paths, curr_len + more, char *);
@@ -83,11 +90,12 @@ static char **get_all_subentries(const char *path, size_t *out_n,
   closedir(dir);
 
   *out_n = curr_len;
+  *is_dir = 1;
   return paths;
 }
 
-struct resolved_pathspec *resolve_pathspec(const char *pathspec,
-                                           filter filter) {
+struct resolved_pathspec *resolve_pathspec(const char *pathspec, filter filter,
+                                           void *userdata) {
 
   char *copy = strdup(pathspec);
   char *last = strpbrk(copy, "?*[]");
@@ -95,9 +103,12 @@ struct resolved_pathspec *resolve_pathspec(const char *pathspec,
   char **paths;
   struct strbuf pattern = STRBUF_INIT;
   size_t n;
+  int is_dir = 0;
   if (!last) {
-    paths = get_all_subentries(pathspec, &n, filter);
+    paths = get_all_subentries(pathspec, &n, filter, userdata, &is_dir);
     strbuf_addstr(&pattern, pathspec);
+    if (is_dir)
+      strbuf_addstr(&pattern, "/*");
   } else {
     char temp = *last;
     *last = '\0';
@@ -105,11 +116,11 @@ struct resolved_pathspec *resolve_pathspec(const char *pathspec,
     *last = temp;
 
     if (last_slash == -1) {
-      paths = get_all_subentries(".", &n, filter);
+      paths = get_all_subentries(".", &n, filter, userdata, &is_dir);
       strbuf_addf(&pattern, "./%s", pathspec);
     } else {
       copy[last_slash] = '\0';
-      paths = get_all_subentries(copy, &n, filter);
+      paths = get_all_subentries(copy, &n, filter, userdata, &is_dir);
       strbuf_addstr(&pattern, pathspec);
     }
   }

@@ -7,7 +7,7 @@ struct resolved_pathspec {
   size_t nr;
 };
 
-typedef int (*filter)(const char *path);
+typedef int (*filter)(const char *path, void *userdata);
 
 /*
  * Recieves a pathspec pattern and returns a struct with all matching absolute
@@ -15,7 +15,8 @@ typedef int (*filter)(const char *path);
  *
  * The pathspec will not resolve to any paths that match the filter function.
  */
-struct resolved_pathspec *resolve_pathspec(const char *pathspec, filter filter);
+struct resolved_pathspec *resolve_pathspec(const char *pathspec, filter filter,
+                                           void *userdata);
 
 void resolved_pathspec_free(struct resolved_pathspec *rp);
 #endif

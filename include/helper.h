@@ -21,4 +21,13 @@ int last_index_of(const char *str, char c);
 // Return a malloc'd string of the absolute path.
 char *normalize_path(const char *path);
 
+// Returns a pointer to a char in path that starts the basename.
+char *basename_inplace(char *path);
+
+int is_directory(const char *path);
+
+// Removes trailing whitespace and returns a pointer to the first non-whitespace
+// character (or to the null terminator if the string is pure spaces)
+char *trim(char *str);
+
 #endif

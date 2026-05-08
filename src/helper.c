@@ -1,6 +1,7 @@
 #include "helper.h"
 #include "strbuf.h"
 #include <asm-generic/errno-base.h>
+#include <ctype.h>
 #include <errno.h>
 #include <limits.h>
 #include <stdarg.h>
@@ -115,4 +116,38 @@ char *normalize_path(const char *path) {
     return strdup("/");
   }
   return normalized_path.buf;
+}
+
+char *basename_inplace(char *path) {
+  int ind = last_index_of(path, '/');
+  if (ind == -1)
+    return path;
+
+  return path + ind + 1;
+}
+
+int is_directory(const char *path) {
+  struct stat st;
+  if (stat(path, &st) != 0)
+    return 0;
+
+  return S_ISDIR(st.st_mode);
+}
+
+char *trim(char *str) {
+
+  while (*str && isspace(*str))
+    str++;
+
+  if (!*str)
+    return str;
+
+  char *end = &str[strlen(str) - 1];
+  while (end > str && isspace(*end))
+    end--;
+
+  if (end != str)
+    *(end + 1) = '\0';
+
+  return str;
 }

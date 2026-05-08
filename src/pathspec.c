@@ -26,8 +26,16 @@ static char **get_all_subentries(const char *path, size_t *out_n) {
 
   DIR *dir = opendir(path);
   if (!dir) {
-    *out_n = 0;
-    return NULL;
+    struct stat st;
+    if (stat(path, &st) == 0) {
+      char **paths = xmalloc(1, char *);
+      paths[0] = strdup(path);
+      *out_n = 1;
+      return paths;
+    } else {
+      *out_n = 0;
+      return NULL;
+    }
   }
 
   struct dirent *ent;
@@ -42,6 +50,10 @@ static char **get_all_subentries(const char *path, size_t *out_n) {
     struct stat st;
     if (stat(entpath.buf, &st) != 0) {
       strbuf_release(&entpath);
+      for (size_t i = 0; i < curr_len; i++) {
+        free(paths[i]);
+      }
+      free(paths);
       *out_n = 0;
       closedir(dir);
       return NULL;
@@ -78,10 +90,11 @@ struct resolved_pathspec *resolve_pathspec(const char *pathspec) {
   char *last = strpbrk(copy, "?*[]");
 
   char **paths;
+  struct strbuf pattern = STRBUF_INIT;
   size_t n;
-  char *pattern = NULL;
   if (!last) {
     paths = get_all_subentries(pathspec, &n);
+    strbuf_addstr(&pattern, pathspec);
   } else {
     char temp = *last;
     *last = '\0';
@@ -90,17 +103,18 @@ struct resolved_pathspec *resolve_pathspec(const char *pathspec) {
 
     if (last_slash == -1) {
       paths = get_all_subentries(".", &n);
-      pattern = last;
+      strbuf_addf(&pattern, "./%s", pathspec);
     } else {
-      pattern = &copy[last_slash + 1];
       copy[last_slash] = '\0';
       paths = get_all_subentries(copy, &n);
+      strbuf_addstr(&pattern, pathspec);
     }
   }
 
   struct resolved_pathspec *rp = xcalloc(1, struct resolved_pathspec);
   for (size_t i = 0; i < n; i++) {
-    int should_add = !pattern || fnmatch(pattern, paths[i], 0) == 0;
+    int should_add = fnmatch(pattern.buf, paths[i], 0) == 0;
+    printf("%s\n", paths[i]);
     if (should_add) {
       rp->matching_paths = xrealloc(rp->matching_paths, ++rp->nr, char *);
       rp->matching_paths[rp->nr - 1] = normalize_path(paths[i]);
@@ -109,6 +123,7 @@ struct resolved_pathspec *resolve_pathspec(const char *pathspec) {
   }
   free(copy);
   free(paths);
+  strbuf_release(&pattern);
 
   qsort(rp->matching_paths, rp->nr, sizeof(char *), cmp);
   for (size_t i = 0; i < rp->nr; i++) {

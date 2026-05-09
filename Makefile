@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -g -std=c23 -Iinclude
+CFLAGS = -Wall -Wextra -g -std=gnu23 -Iinclude
 
 SRCS = $(wildcard src/*.c) $(wildcard src/commands/*.c)
 

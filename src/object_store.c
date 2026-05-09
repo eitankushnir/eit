@@ -76,6 +76,7 @@ int object_store_write_memory(struct object_store *store, enum object_type type,
 
   int headerlen = header.len;
   strbuf_release(&header);
+  strbuf_release(&dir_path);
   free(disk_path);
   fclose(objfile);
 
@@ -182,6 +183,7 @@ int object_store_write_file(struct object_store *store, enum object_type type,
 
   int headerlen = header.len;
   strbuf_release(&header);
+  strbuf_release(&dir_path);
   free(disk_path);
   fclose(objfile);
 

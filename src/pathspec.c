@@ -3,6 +3,7 @@
 #include "strbuf.h"
 #include <dirent.h>
 #include <fnmatch.h>
+#include <linux/limits.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,19 +32,26 @@ static char **get_all_subentries(const char *path, size_t *out_n,
     return NULL;
   }
 
-  DIR *dir = opendir(path);
-  if (!dir) {
-    *is_dir = 0;
-    struct stat st;
-    if (stat(path, &st) == 0) {
+  struct stat st;
+  if (lstat(path, &st) == 0) {
+    if (!S_ISDIR(st.st_mode)) {
       char **paths = xmalloc(1, char *);
       paths[0] = strdup(path);
       *out_n = 1;
+      *is_dir = 0;
       return paths;
-    } else {
-      *out_n = 0;
-      return NULL;
     }
+  } else {
+    *is_dir = 0;
+    *out_n = 0;
+    return NULL;
+  }
+
+  DIR *dir = opendir(path);
+  if (!dir) {
+    *is_dir = 0;
+    *out_n = 0;
+    return NULL;
   }
 
   struct dirent *ent;
@@ -56,7 +64,7 @@ static char **get_all_subentries(const char *path, size_t *out_n,
     strbuf_addf(&entpath, "%s/%s", path, ent->d_name);
 
     struct stat st;
-    if (stat(entpath.buf, &st) != 0) {
+    if (lstat(entpath.buf, &st) != 0) {
       strbuf_release(&entpath);
       for (size_t i = 0; i < curr_len; i++) {
         free(paths[i]);

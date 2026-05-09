@@ -3,11 +3,14 @@
 #include "object.h"
 #include "sha256.h"
 #include "strbuf.h"
+#include <linux/limits.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 void object_store_free(struct object_store *store) {
   free(store->objectsdir);
@@ -87,7 +90,7 @@ int object_store_write_file(struct object_store *store, enum object_type type,
                             const char *path, struct object_id *out_oid,
                             int write_to_disk) {
   struct stat st;
-  if (stat(path, &st) != 0)
+  if (lstat(path, &st) != 0)
     return -1;
 
   struct strbuf header = STRBUF_INIT;
@@ -100,20 +103,34 @@ int object_store_write_file(struct object_store *store, enum object_type type,
   sha256_update(&ctx, (uint8_t *)header.buf, header.len + 1);
 
   // hash the file.
-  size_t bytes_read;
-  uint8_t buf[4096];
-  FILE *f = fopen(path, "rb");
-  if (!f) {
+  if (S_ISLNK(st.st_mode)) {
+    uint8_t buf[PATH_MAX];
+    ssize_t len = readlink(path, (char *)buf, sizeof(buf));
+    if (len < 0) {
+      strbuf_release(&header);
+      return -1;
+    }
+
+    sha256_update(&ctx, buf, len);
+  } else if (!S_ISREG(st.st_mode)) {
     strbuf_release(&header);
     return -1;
+  } else {
+    FILE *f = fopen(path, "rb");
+    if (!f) {
+      strbuf_release(&header);
+      return -1;
+    }
+
+    size_t bytes_read;
+    uint8_t buf[PATH_MAX];
+    while ((bytes_read = fread(buf, sizeof(uint8_t), sizeof(buf), f))) {
+      sha256_update(&ctx, buf, bytes_read);
+    }
+    fclose(f);
   }
 
-  while ((bytes_read = fread(buf, sizeof(uint8_t), sizeof(buf), f))) {
-    sha256_update(&ctx, buf, bytes_read);
-  }
   sha256_final(&ctx, out_oid);
-  fclose(f);
-
   if (!write_to_disk || object_exists(store, out_oid))
     return 0;
 
@@ -126,18 +143,46 @@ int object_store_write_file(struct object_store *store, enum object_type type,
 
   mkdir(dir_path.buf, 0755);
   FILE *objfile = fopen(disk_path, "wb");
-  FILE *sourcefile = fopen(path, "rb");
+  if (!objfile) {
+    strbuf_release(&header);
+    strbuf_release(&dir_path);
+    return -1;
+  }
 
   size_t result = fwrite(header.buf, sizeof(char), header.len + 1, objfile);
 
-  while ((bytes_read = fread(buf, sizeof(uint8_t), sizeof(buf), sourcefile))) {
-    result += fwrite(buf, sizeof(uint8_t), bytes_read, objfile);
+  if (S_ISLNK(st.st_mode)) {
+    uint8_t buf[PATH_MAX];
+    ssize_t len = readlink(path, (char *)buf, sizeof(buf));
+    if (len < 0) {
+      strbuf_release(&header);
+      strbuf_release(&dir_path);
+      fclose(objfile);
+      return -1;
+    }
+
+    result += fwrite(buf, sizeof(char), len, objfile);
+  } else {
+    uint8_t buf[PATH_MAX];
+    size_t bytes_read;
+    FILE *sourcefile = fopen(path, "rb");
+    if (!sourcefile) {
+      strbuf_release(&header);
+      strbuf_release(&dir_path);
+      fclose(objfile);
+      return -1;
+    }
+    while (
+        (bytes_read = fread(buf, sizeof(uint8_t), sizeof(buf), sourcefile))) {
+      result += fwrite(buf, sizeof(uint8_t), bytes_read, objfile);
+    }
+
+    fclose(sourcefile);
   }
 
   int headerlen = header.len;
   strbuf_release(&header);
   free(disk_path);
-  fclose(sourcefile);
   fclose(objfile);
 
   size_t total = st.st_size + headerlen + 1;

@@ -151,3 +151,20 @@ char *trim(char *str) {
 
   return str;
 }
+
+int normalize_mode(int mode) {
+  if (S_ISDIR(mode))
+    return 0040000;
+
+  if (S_ISLNK(mode))
+    return 0120000;
+
+  if (S_ISREG(mode)) {
+    if (mode & S_IXUSR)
+      return 0100755;
+
+    return 0100644;
+  }
+
+  return -1;
+}

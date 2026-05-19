@@ -30,4 +30,6 @@ int is_directory(const char *path);
 // character (or to the null terminator if the string is pure spaces)
 char *trim(char *str);
 
+int normalize_mode(int mode);
+
 #endif

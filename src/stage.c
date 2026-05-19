@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/stat.h>
 
 int write_stage_disk(struct stage *s) {
@@ -95,20 +96,39 @@ void stage_free(struct stage *s) {
   free(s);
 }
 
+static int index_on_stage(struct stage *s, const char *path, int *is_on_stage) {
+  int l = 0;
+  int r = s->entries_nr - 1;
+
+  while (l <= r) {
+    int m = l + ((r - l) / 2);
+    int cmp = strcmp(path, s->entries[m]->path);
+    if (cmp == 0) {
+      *is_on_stage = 1;
+      return m;
+    }
+    if (cmp < 0)
+      r = m - 1;
+    else
+      l = m + 1;
+  }
+
+  *is_on_stage = 0;
+  return l;
+}
+
 int stage_add_path(struct stage *s, const char *path, struct object_id *oid) {
   struct stat st;
   if (stat(path, &st) != 0)
     return -1;
 
-  size_t i;
-  for (i = 0; i < s->entries_nr; i++) {
-    int res = strcmp(path, s->entries[i]->path);
-    if (res > 0)
-      break;
-    if (res == 0) {
-      s->entries[i]->oid = *oid;
-      return 0;
-    }
+  int is_on_stage;
+  size_t i = index_on_stage(s, path, &is_on_stage);
+  if (is_on_stage) {
+    s->entries[i]->st = st;
+    s->entries[i]->mode = normalize_mode(st.st_mode);
+    s->entries[i]->oid = *oid;
+    return 0;
   }
 
   s->entries = xrealloc(s->entries, ++s->entries_nr, struct stage_entry *);
@@ -127,16 +147,10 @@ int stage_add_path(struct stage *s, const char *path, struct object_id *oid) {
 }
 
 int stage_remove_path(struct stage *s, const char *path) {
-  size_t i;
-  for (i = 0; i < s->entries_nr; i++) {
-    int res = strcmp(path, s->entries[i]->path);
-    if (res == 0) {
-      break;
-    }
-  }
+  int is_on_stage;
+  size_t i = index_on_stage(s, path, &is_on_stage);
 
-  // TODO: could have binary search.
-  if (i == s->entries_nr)
+  if (!is_on_stage)
     return -1;
 
   free(s->entries[i]->path);
@@ -147,4 +161,11 @@ int stage_remove_path(struct stage *s, const char *path) {
   }
   s->entries = xrealloc(s->entries, --s->entries_nr, struct stage_entry *);
   return 0;
+}
+
+int stage_has_path(struct stage *s, const char *path) {
+  int is_on_stage;
+  index_on_stage(s, path, &is_on_stage);
+
+  return is_on_stage;
 }

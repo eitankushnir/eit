@@ -34,9 +34,10 @@ struct stage *parse_stage_disk(const char *path);
 void stage_free(struct stage *s);
 
 /*
- * Add and remove paths from the stage struct
+ * Add paths to the stage, remove them and check if they exist.
  */
 int stage_add_path(struct stage *s, const char *path, struct object_id *oid);
 int stage_remove_path(struct stage *s, const char *path);
+int stage_has_path(struct stage *s, const char *path);
 
 #endif

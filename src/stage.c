@@ -117,11 +117,8 @@ static int index_on_stage(struct stage *s, const char *path, int *is_on_stage) {
   return l;
 }
 
-int stage_add_path(struct stage *s, const char *path, struct object_id *oid) {
-  struct stat st;
-  if (stat(path, &st) != 0)
-    return -1;
-
+int stage_add_path(struct stage *s, const char *path, struct stat st,
+                   struct object_id *oid) {
   int is_on_stage;
   size_t i = index_on_stage(s, path, &is_on_stage);
   if (is_on_stage) {
@@ -132,8 +129,8 @@ int stage_add_path(struct stage *s, const char *path, struct object_id *oid) {
   }
 
   s->entries = xrealloc(s->entries, ++s->entries_nr, struct stage_entry *);
-  for (size_t j = i; j < s->entries_nr - 1; j++) {
-    s->entries[j + 1] = s->entries[j];
+  for (size_t j = s->entries_nr - 1; j > i; j--) {
+    s->entries[j] = s->entries[j - 1];
   }
   struct stage_entry *new_ent = xmalloc(1, struct stage_entry);
   new_ent->path = strdup(path);

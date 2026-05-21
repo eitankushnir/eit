@@ -107,6 +107,13 @@ struct stage *repo_get_stage(struct repository *repo) {
   return repo->stage;
 }
 
+static int dont_go_into_repo_dir(const char *path, void *_) {
+  if (strstr(path, REPO_DIR_NAME) || strstr(path, ".git"))
+    return 1;
+
+  return 0;
+}
+
 struct ignores **repo_get_ignores(struct repository *repo) {
   if (repo->ignores)
     return repo->ignores;
@@ -115,7 +122,7 @@ struct ignores **repo_get_ignores(struct repository *repo) {
   struct strbuf ignores_spec = STRBUF_INIT;
   strbuf_addf(&ignores_spec, "%s/%s", repo->worktree, "*.eitignore");
   struct resolved_pathspec *ignores =
-      resolve_pathspec(ignores_spec.buf, NULL, NULL);
+      resolve_pathspec(ignores_spec.buf, dont_go_into_repo_dir, NULL);
 
   strbuf_release(&ignores_spec);
 

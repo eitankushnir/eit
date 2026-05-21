@@ -1,6 +1,9 @@
 #include "repository.h"
 #include "helper.h"
+#include "object.h"
 #include "object_store.h"
+#include "sha256.h"
+#include "stage.h"
 #include "strbuf.h"
 #include <dirent.h>
 #include <stdlib.h>
@@ -11,6 +14,7 @@ void repository_init(struct repository *repo) {
   repo->repodir = repo_find_repo_dir();
   repo->worktree = repo_find_repo_worktree();
   repo->objects = NULL;
+  repo->stage = NULL;
 }
 
 void repository_release(struct repository *repo) {
@@ -68,8 +72,11 @@ char *repo_find_repo_worktree() {
   return strbuf_truncate(&worktree, last_index_of(worktree.buf, '/'));
 }
 
-int repo_is_path_inside(struct repository *repo, const char *path) {
-  return strstr(path, repo->repodir) != NULL;
+const char *repo_relative_path(struct repository *repo, const char *path) {
+  if (strstr(path, repo->worktree) != path)
+    return NULL;
+
+  return path + strlen(repo->worktree) + 1;
 }
 
 struct object_store *repo_get_object_store(struct repository *repo) {
@@ -83,4 +90,40 @@ struct object_store *repo_get_object_store(struct repository *repo) {
   repo->objects = object_store_new(object_storage_loc.buf);
   strbuf_release(&object_storage_loc);
   return repo->objects;
+}
+
+struct stage *repo_get_stage(struct repository *repo) {
+  if (repo->stage)
+    return repo->stage;
+
+  struct strbuf stage_loc = STRBUF_INIT;
+  strbuf_addf(&stage_loc, "%s/%s", repo->repodir, "stage");
+  repo->stage = parse_stage_disk(stage_loc.buf);
+  strbuf_release(&stage_loc);
+  return repo->stage;
+}
+
+enum staging_error repo_stage_file(struct repository *repo, const char *path) {
+  struct object_id oid;
+  struct stat st;
+  if (stat(path, &st) != 0)
+    return NO_SUCH_FILE;
+
+  const char *relpath = repo_relative_path(repo, path);
+  if (!relpath) {
+    return PATH_OUTSIDE_REPO;
+  }
+
+  struct object_store *store = repo_get_object_store(repo);
+  struct stage *stage = repo_get_stage(repo);
+
+  int res = object_store_write_file(store, OBJ_BLOB, path, &oid, 1);
+  if (res != 0)
+    return STAGING_FAILED;
+
+  res = stage_add_path(stage, relpath, st, &oid);
+  if (res != 0)
+    return STAGING_FAILED;
+
+  return SUCCESS;
 }

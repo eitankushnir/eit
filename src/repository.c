@@ -108,7 +108,7 @@ struct stage *repo_get_stage(struct repository *repo) {
 }
 
 static int dont_go_into_repo_dir(const char *path, void *_) {
-  if (strstr(path, REPO_DIR_NAME) || strstr(path, ".git"))
+  if (ends_with(path, REPO_DIR_NAME) || ends_with(path, ".git"))
     return 1;
 
   return 0;

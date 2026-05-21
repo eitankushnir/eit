@@ -85,6 +85,16 @@ int last_index_of(const char *str, char c) {
   return cptr - str;
 }
 
+int ends_with(const char *str, const char *suffix) {
+  size_t len = strlen(str);
+  size_t suflen = strlen(suffix);
+
+  if (suflen > len)
+    return 0;
+
+  return strcmp(str + len - suflen, suffix) == 0;
+}
+
 char *normalize_path(const char *path) {
   if (!path || strlen(path) == 0)
     return NULL;

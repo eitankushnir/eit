@@ -1,5 +1,12 @@
 #include "command.h"
+#include "helper.h"
+#include "ignore.h"
+#include "object.h"
+#include "object_store.h"
+#include "pathspec.h"
 #include "repository.h"
+#include "sha256.h"
+#include "stage.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -9,6 +16,8 @@
 static struct command commands[] = {
     {"init", cmd_init},
     {"hash-object", cmd_hash_object},
+    {"ls-files", cmd_ls_files},
+    {"add", cmd_add},
 };
 
 int main(int argc, char **argv) {
@@ -22,6 +31,7 @@ int main(int argc, char **argv) {
 
   struct repository repo;
   repository_init(&repo);
+
   for (size_t i = 0; i < command_nr; i++) {
     if (strcmp(command, commands[i].name) == 0) {
       int result = commands[i].fn(argc - 1, argv + 1, &repo);

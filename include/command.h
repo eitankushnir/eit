@@ -11,5 +11,7 @@ struct command {
 
 int cmd_init(int argc, char **argv, struct repository *repo);
 int cmd_hash_object(int argc, char **argv, struct repository *repo);
+int cmd_ls_files(int argc, char **argv, struct repository *repo);
+int cmd_add(int argc, char **argv, struct repository *repo);
 
 #endif

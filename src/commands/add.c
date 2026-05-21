@@ -20,7 +20,8 @@ int cmd_add(int argc, char **argv, struct repository *repo) {
   struct resolved_pathspec **specs = NULL;
   size_t c = 0;
   for (int i = 1; i < argc; i++) {
-    struct resolved_pathspec *spec = resolve_pathspec(argv[i], NULL, NULL);
+    struct resolved_pathspec *spec =
+        repo_resolve_pathspec_with_ignore(repo, argv[i]);
     if (spec->nr == 0) {
       free(spec);
       continue;

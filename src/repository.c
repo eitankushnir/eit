@@ -1,11 +1,14 @@
 #include "repository.h"
 #include "helper.h"
+#include "ignore.h"
 #include "object.h"
 #include "object_store.h"
+#include "pathspec.h"
 #include "sha256.h"
 #include "stage.h"
 #include "strbuf.h"
 #include <dirent.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -15,6 +18,7 @@ void repository_init(struct repository *repo) {
   repo->worktree = repo_find_repo_worktree();
   repo->objects = NULL;
   repo->stage = NULL;
+  repo->ignores = NULL;
 }
 
 void repository_release(struct repository *repo) {
@@ -103,6 +107,27 @@ struct stage *repo_get_stage(struct repository *repo) {
   return repo->stage;
 }
 
+struct ignores **repo_get_ignores(struct repository *repo) {
+  if (repo->ignores)
+    return repo->ignores;
+
+  // allocate (lazy init)
+  struct strbuf ignores_spec = STRBUF_INIT;
+  strbuf_addf(&ignores_spec, "%s/%s", repo->worktree, "*.eitignore");
+  struct resolved_pathspec *ignores =
+      resolve_pathspec(ignores_spec.buf, NULL, NULL);
+
+  strbuf_release(&ignores_spec);
+
+  repo->ignores = xmalloc(ignores->nr + 1, struct ignores *);
+  for (size_t i = 0; i < ignores->nr; i++) {
+    repo->ignores[i] = parse_ignores(ignores->matching_paths[i]);
+  }
+  repo->ignores[ignores->nr] = NULL;
+
+  return repo->ignores;
+}
+
 enum staging_error repo_stage_file(struct repository *repo, const char *path) {
   struct object_id oid;
   struct stat st;
@@ -126,4 +151,25 @@ enum staging_error repo_stage_file(struct repository *repo, const char *path) {
     return STAGING_FAILED;
 
   return SUCCESS;
+}
+
+static int filter_ignored(const char *path, void *ignores) {
+  if (strstr(path, ".eit") || strstr(path, ".git"))
+    return 1;
+
+  struct ignores **ig = (struct ignores **)ignores;
+  size_t i = 0;
+  while (ig[i]) {
+    if (ignores_is_ignored(ig[i], path))
+      return 1;
+    i++;
+  }
+
+  return 0;
+}
+
+struct resolved_pathspec *
+repo_resolve_pathspec_with_ignore(struct repository *repo,
+                                  const char *pathspec) {
+  return resolve_pathspec(pathspec, filter_ignored, repo_get_ignores(repo));
 }

@@ -138,7 +138,7 @@ struct ignores **repo_get_ignores(struct repository *repo) {
 enum staging_error repo_stage_file(struct repository *repo, const char *path) {
   struct object_id oid;
   struct stat st;
-  if (stat(path, &st) != 0)
+  if (lstat(path, &st) != 0)
     return NO_SUCH_FILE;
 
   const char *relpath = repo_relative_path(repo, path);

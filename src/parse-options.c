@@ -95,6 +95,8 @@ static int cleanup_argv(int argc, char **argv) {
 }
 
 static struct option *find_short_option(char c, struct option *options) {
+  if (!options)
+    return NULL;
   int i = 0;
   while (options[i].type != OPT_END) {
     if (c == options[i].short_name)
@@ -107,6 +109,9 @@ static struct option *find_short_option(char c, struct option *options) {
 
 static struct option *find_long_option(char *arg, struct option *options,
                                        int *is_neg) {
+
+  if (!options)
+    return NULL;
   int i = 0;
   char *eq = strchr(arg, '=');
   if (eq)

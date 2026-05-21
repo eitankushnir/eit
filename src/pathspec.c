@@ -26,7 +26,7 @@ void resolved_pathspec_free(struct resolved_pathspec *rp) {
 static char **get_all_subentries(const char *path, size_t *out_n,
                                  filter dont_go_in, void *userdata,
                                  int *is_dir) {
-  if (dont_go_in(path, userdata)) {
+  if (dont_go_in && dont_go_in(path, userdata)) {
     *is_dir = 0;
     *out_n = 0;
     return NULL;
@@ -90,7 +90,7 @@ static char **get_all_subentries(const char *path, size_t *out_n,
       }
       strbuf_release(&entpath);
       free(moremore);
-    } else if (!dont_go_in(entpath.buf, userdata)) {
+    } else if (!dont_go_in || !dont_go_in(entpath.buf, userdata)) {
       paths = xrealloc(paths, ++curr_len, char *);
       paths[curr_len - 1] = entpath.buf;
     } else {

@@ -3,6 +3,7 @@
 #include "object.h"
 #include "sha256.h"
 #include "strbuf.h"
+#include <dirent.h>
 #include <linux/limits.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -35,6 +36,45 @@ char *oid_to_path(struct object_store *store, struct object_id *oid) {
   return path.buf;
 }
 
+enum autocomplete_error complete_hex(struct object_store *store, const char *partial_hex, struct object_id *out_oid) {
+  if (!partial_hex || strlen(partial_hex) < 3)
+    return PARTIAL_TOO_SHORT;
+
+  struct strbuf dir_path = STRBUF_INIT;
+  strbuf_addf(&dir_path, "%s/%.2s", store->objectsdir, partial_hex);
+
+  DIR *d = opendir(dir_path.buf);
+  if (!d) {
+    strbuf_release(&dir_path);
+    return NO_SUCH_HEX;
+  }
+
+  struct dirent *ent;
+  size_t match_count = 0;
+  char match[63] = {0};
+  while ((ent = readdir(d))) {
+    if (skip_prefix(ent->d_name, partial_hex + 2, NULL)) {
+      match_count++;
+      memcpy(match, ent->d_name, 62);
+    }
+  }
+
+  closedir(d);
+  strbuf_release(&dir_path);
+
+  if (match_count == 0)
+    return NO_SUCH_HEX;
+  if (match_count > 1)
+    return AMBIGOUS_HEX;
+
+  struct hex_oid fullhex;
+  memcpy(fullhex.hex, partial_hex, 2);
+  memcpy(fullhex.hex + 2, match, 64 - 2);
+  fullhex.hex[64] = '\0';
+  hex_to_oid(&fullhex, out_oid);
+  return AUTOCOMPLETE_SUCCESS;
+}
+
 int object_exists(struct object_store *store, struct object_id *oid) {
   char *objpath = oid_to_path(store, oid);
 
@@ -59,8 +99,10 @@ int object_store_write_memory(struct object_store *store, enum object_type type,
   sha256_update(&ctx, (uint8_t *)buf, len);
   sha256_final(&ctx, out_oid);
 
-  if (!write_to_disk || object_exists(store, out_oid))
+  if (!write_to_disk || object_exists(store, out_oid)) {
+    strbuf_release(&header);
     return 0;
+  }
 
   char *disk_path = oid_to_path(store, out_oid);
   // Create the directory
@@ -132,8 +174,10 @@ int object_store_write_file(struct object_store *store, enum object_type type,
   }
 
   sha256_final(&ctx, out_oid);
-  if (!write_to_disk || object_exists(store, out_oid))
+  if (!write_to_disk || object_exists(store, out_oid)) {
+    strbuf_release(&header);
     return 0;
+  }
 
   char *disk_path = oid_to_path(store, out_oid);
 
@@ -222,5 +266,7 @@ void *object_store_read_raw(struct object_store *store, struct object_id *oid,
         oid_to_hex(oid, &hex));
   }
 
+  free(path);
+  fclose(objfile);
   return data;
 }

@@ -18,6 +18,15 @@ void object_store_free(struct object_store *store);
 // when written.
 char *oid_to_path(struct object_store *store, struct object_id *oid);
 
+// Auto-Completes short (> 3 char) partial hexes.
+enum autocomplete_error {
+  AUTOCOMPLETE_SUCCESS,
+  NO_SUCH_HEX,
+  AMBIGOUS_HEX,
+  PARTIAL_TOO_SHORT,
+};
+enum autocomplete_error complete_hex(struct object_store *store, const char *partial_hex, struct object_id *out_oid);
+
 // Check whether an object with oid exists in the store.
 int object_exists(struct object_store *store, struct object_id *oid);
 

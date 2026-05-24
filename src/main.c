@@ -18,6 +18,8 @@ static struct command commands[] = {
     {"hash-object", cmd_hash_object},
     {"ls-files", cmd_ls_files},
     {"add", cmd_add},
+    {"write-tree", cmd_write_tree},
+    {"cat-file", cmd_cat_file},
 };
 
 int main(int argc, char **argv) {

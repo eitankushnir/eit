@@ -18,6 +18,7 @@ int create_directory_gently(const char *path);
 int index_of(const char *str, char c);
 int last_index_of(const char *str, char c);
 int ends_with(const char *str, const char *suffix);
+int skip_prefix(const char *str, const char *prefix, const char **out);
 
 // Return a malloc'd string of the absolute path.
 char *normalize_path(const char *path);

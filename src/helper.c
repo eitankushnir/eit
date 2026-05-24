@@ -95,6 +95,26 @@ int ends_with(const char *str, const char *suffix) {
   return strcmp(str + len - suflen, suffix) == 0;
 }
 
+int skip_prefix(const char *str, const char *prefix, const char **out) {
+  if (!prefix) {
+    if (out)
+      *out = str;
+    return 1;
+  }
+
+  while (*prefix) {
+    if (*str != *prefix)
+      return 0;
+
+    prefix++;
+    str++;
+  }
+
+  if (out)
+    *out = str;
+  return 1;
+}
+
 char *normalize_path(const char *path) {
   if (!path || strlen(path) == 0)
     return NULL;

@@ -12,6 +12,7 @@ int cmd_add(int argc, char **argv, struct repository *repo) {
 
   char *usage[] = {
       "Usage: git add [--] [<pathspec>...]",
+      "       Stage an untracked file or chages to a tracked file",
       NULL,
   };
 
@@ -36,10 +37,17 @@ int cmd_add(int argc, char **argv, struct repository *repo) {
   for (size_t i = 0; i < c; i++) {
     struct resolved_pathspec *spec = specs[i];
     for (size_t j = 0; j < spec->nr; j++) {
-      if (repo_stage_file(repo, spec->matching_paths[j]) != SUCCESS)
+      if (repo_stage_file(repo, spec->matching_paths[j]) != STAGE_SUCCESS)
         fprintf(stderr, "Failed to stage %s\n", spec->matching_paths[j]);
     }
   }
+
+  for (size_t i = 0; i < c; i++) {
+    struct resolved_pathspec *spec = specs[i];
+    resolved_pathspec_free(spec);
+  }
+
+  free(specs);
 
   write_stage_disk(repo_get_stage(repo));
   return 0;

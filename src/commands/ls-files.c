@@ -46,6 +46,7 @@ int cmd_ls_files(int argc, char **argv, struct repository *repo) {
 
   char *usage[] = {
       "Usage: eit ls-files [flag]",
+      "       List stage files",
       NULL,
   };
 

@@ -39,6 +39,7 @@ int cmd_init(int argc, char **argv, struct repository *repo) {
   char *path = normalize_path(REPO_DIR_NAME);
   printf("Initialized empty repository at: %s\n", path);
   free(path);
+  strbuf_release(&dir);
 
   return 0;
 }

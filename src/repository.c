@@ -7,10 +7,12 @@
 #include "sha256.h"
 #include "stage.h"
 #include "strbuf.h"
+#include "tree.h"
 #include <dirent.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/stat.h>
 
 void repository_init(struct repository *repo) {
@@ -27,6 +29,21 @@ void repository_release(struct repository *repo) {
 
   if (repo->worktree)
     free(repo->worktree);
+
+  if (repo->objects)
+    object_store_free(repo->objects);
+
+  if (repo->stage)
+    stage_free(repo->stage);
+
+  if (repo->ignores) {
+    size_t i = 0;
+    while (repo->ignores[i]) {
+      ignores_free(repo->ignores[i]);
+      i++;
+    }
+    free(repo->ignores);
+  }
 }
 
 char *repo_find_repo_dir() {
@@ -132,6 +149,7 @@ struct ignores **repo_get_ignores(struct repository *repo) {
   }
   repo->ignores[ignores->nr] = NULL;
 
+  resolved_pathspec_free(ignores);
   return repo->ignores;
 }
 
@@ -157,7 +175,7 @@ enum staging_error repo_stage_file(struct repository *repo, const char *path) {
   if (res != 0)
     return STAGING_FAILED;
 
-  return SUCCESS;
+  return STAGE_SUCCESS;
 }
 
 static int filter_ignored(const char *path, void *ignores) {
@@ -175,8 +193,72 @@ static int filter_ignored(const char *path, void *ignores) {
   return 0;
 }
 
-struct resolved_pathspec *
-repo_resolve_pathspec_with_ignore(struct repository *repo,
-                                  const char *pathspec) {
+struct resolved_pathspec *repo_resolve_pathspec_with_ignore(
+    struct repository *repo,
+    const char *pathspec) {
+
   return resolve_pathspec(pathspec, filter_ignored, repo_get_ignores(repo));
+}
+
+static enum write_tree_error repo_write_tree_helper(
+    struct repository *repo,
+    struct object_id *out_oid,
+    const char *prefix,
+    size_t start,
+    size_t *out_end) {
+
+  struct tree t = {0};
+  struct stage *s = repo_get_stage(repo);
+  struct object_store *store = repo_get_object_store(repo);
+
+  for (size_t i = start; i < s->entries_nr; i++) {
+    struct stage_entry *ent = s->entries[i];
+    const char *basename;
+
+    if (skip_prefix(ent->path, prefix, &basename)) {
+      if (index_of(basename, '/') == -1) {
+        // File
+        struct tree_entry new_ent = {
+            .filename = basename,
+            .filename_len = strlen(basename),
+            .mode = ent->mode,
+            .oid = ent->oid,
+        };
+
+        tree_add_entry(&t, &new_ent);
+      } else {
+        struct tree_entry new_ent;
+        size_t slash_idx = index_of(basename, '/');
+
+        struct strbuf filename = STRBUF_INIT, new_loc = STRBUF_INIT;
+        strbuf_addraw(&filename, basename, slash_idx);
+        strbuf_addf(&new_loc, "%s%s/", prefix, filename.buf);
+
+        new_ent.filename_len = slash_idx;
+        new_ent.filename = filename.buf;
+        new_ent.mode = 0040000;
+
+        repo_write_tree_helper(repo, &new_ent.oid, new_loc.buf, i, &i);
+        tree_add_entry(&t, &new_ent);
+
+        strbuf_release(&filename);
+        strbuf_release(&new_loc);
+      }
+      // Went outside of location.
+    } else {
+      *out_end = i;
+      break;
+    }
+  }
+  object_store_write_memory(store, OBJ_TREE, t.buf, t.size, out_oid, 1);
+  free(t.buf);
+  return WRITE_TREE_SUCCESS;
+}
+
+enum write_tree_error repo_write_stage_as_tree(
+    struct repository *repo,
+    struct object_id *out_oid) {
+
+  size_t end;
+  return repo_write_tree_helper(repo, out_oid, "", 0, &end);
 }

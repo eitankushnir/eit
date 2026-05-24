@@ -4,7 +4,9 @@
 #include "ignore.h"
 #include "object_store.h"
 #include "pathspec.h"
+#include "sha256.h"
 #include "stage.h"
+#include "tree.h"
 #define REPO_DIR_NAME ".eit"
 
 struct repository {
@@ -13,12 +15,11 @@ struct repository {
 
   struct object_store *objects;
   struct stage *stage;
-  struct ignores *
-      *ignores; // NULL terminated array of all ignore files in the repo.
+  struct ignores **ignores; // NULL terminated array of all ignore files in the repo.
 };
 
 enum staging_error {
-  SUCCESS,
+  STAGE_SUCCESS,
   PATH_OUTSIDE_REPO,
   NO_SUCH_FILE,
   STAGING_FAILED,
@@ -42,8 +43,14 @@ struct object_store *repo_get_object_store(struct repository *repo);
 struct stage *repo_get_stage(struct repository *repo);
 struct ignores **repo_get_ignores(struct repository *repo);
 
-struct resolved_pathspec *
-repo_resolve_pathspec_with_ignore(struct repository *repo,
-                                  const char *pathspec);
+struct resolved_pathspec *repo_resolve_pathspec_with_ignore(struct repository *repo,
+                                                            const char *pathspec);
+
+enum write_tree_error {
+  WRITE_TREE_SUCCESS,
+  NOT_MERGED,
+};
+
+enum write_tree_error repo_write_stage_as_tree(struct repository *repo, struct object_id *out_oid);
 
 #endif

@@ -9,17 +9,14 @@
 #include <string.h>
 
 void tree_add_entry(struct tree *t, struct tree_entry *ent) {
-  struct strbuf s = STRBUF_INIT;
+  t->size = 2 * sizeof(uint32_t) + 32 + ent->filename_len + 1;
+  t->buf = xmalloc(t->size, char);
   uint32_t stored_mode = htonl(ent->mode);
-  strbuf_addraw(&s, &stored_mode, sizeof(uint32_t));
-  strbuf_addraw(&s, ent->oid.hash, 32);
   uint32_t stored_len = htonl(ent->filename_len);
-  strbuf_addraw(&s, &stored_len, sizeof(uint32_t));
-  strbuf_addstr(&s, ent->filename);
-  t->buf = xrealloc(t->buf, t->size + s.len, char);
-  memcpy(t->buf + t->size, s.buf, s.len);
-  t->size += s.len;
-  strbuf_release(&s);
+  memcpy(t->buf, &stored_mode, sizeof(uint32_t));
+  memcpy(t->buf + sizeof(uint32_t), ent->oid.hash, 32);
+  memcpy(t->buf + sizeof(uint32_t) + 32, &stored_len, sizeof(uint32_t));
+  memcpy(t->buf + 2 * sizeof(uint32_t) + 32, ent->filename, ent->filename_len + 1);
 }
 
 void tree_get_iterator(struct tree *t, struct tree_iterator *out_it) {
@@ -44,10 +41,9 @@ struct tree_entry *tree_iterate(struct tree_iterator *t) {
   t->ent.filename_len = ntohl(t->ent.filename_len);
   t->ent.mode = ntohl(t->ent.mode);
 
-  t->ent.filename = xcalloc(t->ent.filename_len + 1, char);
-  memcpy(t->ent.filename, t->buf, t->ent.filename_len);
-  t->buf += t->ent.filename_len;
-  t->size -= t->ent.filename_len;
+  t->ent.filename = t->buf;
+  t->buf += t->ent.filename_len + 1;
+  t->size -= t->ent.filename_len + 1;
 
   return &t->ent;
 }
@@ -60,6 +56,5 @@ void tree_pretty_print(struct tree *t) {
   struct hex_oid hex;
   while ((ent = tree_iterate(&it))) {
     printf("%06o %s %s\n", ent->mode, oid_to_hex(&ent->oid, &hex), ent->filename);
-    free(ent->filename);
   }
 }

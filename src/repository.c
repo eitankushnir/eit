@@ -211,7 +211,8 @@ static enum write_tree_error repo_write_tree_helper(
   struct stage *s = repo_get_stage(repo);
   struct object_store *store = repo_get_object_store(repo);
 
-  for (size_t i = start; i < s->entries_nr; i++) {
+  size_t i = start;
+  while (i < s->entries_nr) {
     struct stage_entry *ent = s->entries[i];
     const char *basename;
 
@@ -226,6 +227,7 @@ static enum write_tree_error repo_write_tree_helper(
         };
 
         tree_add_entry(&t, &new_ent);
+        i++;
       } else {
         struct tree_entry new_ent;
         size_t slash_idx = index_of(basename, '/');
@@ -246,10 +248,11 @@ static enum write_tree_error repo_write_tree_helper(
       }
       // Went outside of location.
     } else {
-      *out_end = i;
       break;
     }
   }
+
+  *out_end = i;
   object_store_write_memory(store, OBJ_TREE, t.buf, t.size, out_oid, 1);
   free(t.buf);
   return WRITE_TREE_SUCCESS;

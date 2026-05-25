@@ -1,22 +1,26 @@
 #include "tree.h"
 #include "helper.h"
 #include "sha256.h"
-#include "strbuf.h"
 #include <netinet/in.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 void tree_add_entry(struct tree *t, struct tree_entry *ent) {
-  t->size = 2 * sizeof(uint32_t) + 32 + ent->filename_len + 1;
-  t->buf = xmalloc(t->size, char);
+  size_t entry_bytes = 2 * sizeof(uint32_t) + 32 + ent->filename_len + 1;
+  t->buf = xrealloc(t->buf, t->size + entry_bytes, char);
+
+  char *tail = (char *)t->buf + t->size;
   uint32_t stored_mode = htonl(ent->mode);
   uint32_t stored_len = htonl(ent->filename_len);
-  memcpy(t->buf, &stored_mode, sizeof(uint32_t));
-  memcpy(t->buf + sizeof(uint32_t), ent->oid.hash, 32);
-  memcpy(t->buf + sizeof(uint32_t) + 32, &stored_len, sizeof(uint32_t));
-  memcpy(t->buf + 2 * sizeof(uint32_t) + 32, ent->filename, ent->filename_len + 1);
+  memcpy(tail, &stored_mode, sizeof(uint32_t));
+  memcpy(tail + sizeof(uint32_t), ent->oid.hash, 32);
+  memcpy(tail + sizeof(uint32_t) + 32, &stored_len, sizeof(uint32_t));
+  memcpy(tail + 2 * sizeof(uint32_t) + 32, ent->filename, ent->filename_len + 1);
+
+  t->size += entry_bytes;
 }
 
 void tree_get_iterator(struct tree *t, struct tree_iterator *out_it) {

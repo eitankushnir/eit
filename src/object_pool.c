@@ -15,11 +15,20 @@ struct object_pool *object_pool_new(size_t buckets_nr) {
   return p;
 }
 
+static void object_free(struct object *obj) {
+  if (obj->type == OBJ_TREE) {
+    struct tree *t = (struct tree *)obj;
+    free(t->buf);
+  }
+
+  free(obj);
+}
+
 void object_pool_free(struct object_pool *pool) {
   for (size_t i = 0; i < pool->buckets_nr; i++) {
     struct object_bucket *b = pool->buckets[i];
     while (b) {
-      free(b->obj);
+      object_free(b->obj);
       struct object_bucket *tmp = b;
       b = b->next;
       free(tmp);

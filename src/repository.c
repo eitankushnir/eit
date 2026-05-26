@@ -2,6 +2,7 @@
 #include "helper.h"
 #include "ignore.h"
 #include "object.h"
+#include "object_pool.h"
 #include "object_store.h"
 #include "pathspec.h"
 #include "sha256.h"
@@ -16,11 +17,9 @@
 #include <sys/stat.h>
 
 void repository_init(struct repository *repo) {
+  memset(repo, 0, sizeof(struct repository));
   repo->repodir = repo_find_repo_dir();
   repo->worktree = repo_find_repo_worktree();
-  repo->objects = NULL;
-  repo->stage = NULL;
-  repo->ignores = NULL;
 }
 
 void repository_release(struct repository *repo) {
@@ -44,6 +43,9 @@ void repository_release(struct repository *repo) {
     }
     free(repo->ignores);
   }
+
+  if (repo->parsed_object_pool)
+    object_store_free(repo->parsed_object_pool);
 }
 
 char *repo_find_repo_dir() {
@@ -151,6 +153,14 @@ struct ignores **repo_get_ignores(struct repository *repo) {
 
   resolved_pathspec_free(ignores);
   return repo->ignores;
+}
+
+struct object_pool *repo_get_pool(struct repository *repo) {
+  if (repo->parsed_object_pool)
+    return repo->parsed_object_pool;
+
+  repo->parsed_object_pool = object_pool_new(100);
+  return repo->parsed_object_pool;
 }
 
 enum staging_error repo_stage_file(struct repository *repo, const char *path) {
@@ -264,4 +274,27 @@ enum write_tree_error repo_write_stage_as_tree(
 
   size_t end;
   return repo_write_tree_helper(repo, out_oid, "", 0, &end);
+}
+
+int repo_parse_tree(struct repository *repo, struct tree *tree) {
+  if (tree->obj.parsed)
+    return 0;
+
+  struct object_store *store = repo_get_object_store(repo);
+  size_t size;
+  enum object_type type;
+  void *buf = object_store_read_raw(store, &tree->obj.oid, &size, &type);
+  if (!buf)
+    return -1;
+
+  if (type != OBJ_TREE) {
+    free(buf);
+    return -1;
+  }
+
+  tree->buf = buf;
+  tree->size = size;
+  tree->obj.parsed = 1;
+
+  return 0;
 }

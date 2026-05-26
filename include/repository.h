@@ -2,6 +2,7 @@
 #define REPOSITORY_H
 
 #include "ignore.h"
+#include "object_pool.h"
 #include "object_store.h"
 #include "pathspec.h"
 #include "sha256.h"
@@ -16,6 +17,8 @@ struct repository {
   struct object_store *objects;
   struct stage *stage;
   struct ignores **ignores; // NULL terminated array of all ignore files in the repo.
+
+  struct object_pool *parsed_object_pool; // Where all objects that where looked up and parsed live.
 };
 
 enum staging_error {
@@ -42,6 +45,7 @@ const char *repo_relative_path(struct repository *repo, const char *path);
 struct object_store *repo_get_object_store(struct repository *repo);
 struct stage *repo_get_stage(struct repository *repo);
 struct ignores **repo_get_ignores(struct repository *repo);
+struct object_pool *repo_get_pool(struct repository *repo);
 
 struct resolved_pathspec *repo_resolve_pathspec_with_ignore(struct repository *repo,
                                                             const char *pathspec);
@@ -52,5 +56,11 @@ enum write_tree_error {
 };
 
 enum write_tree_error repo_write_stage_as_tree(struct repository *repo, struct object_id *out_oid);
+
+// PASRING FUNCTIONS.
+// Takes a pointer (usually generated via a lookup function).
+// Hydrates the struct with information from the disk. sets parsed flag to 1.
+// If there is a type mismatch -1 is returned. else 0.
+int repo_parse_tree(struct repository *repo, struct tree *tree);
 
 #endif

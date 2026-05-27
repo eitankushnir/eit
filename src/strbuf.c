@@ -58,6 +58,9 @@ char *strbuf_addf(struct strbuf *sb, const char *format, ...) {
 }
 
 char *strbuf_addraw(struct strbuf *sb, void *buf, size_t len) {
+  if (len == 0)
+    return sb->buf;
+
   if (sb->alloc == 0) {
     sb->buf = xmalloc(STRBUF_INIT_ALLOC_SIZE, char);
     sb->alloc = STRBUF_INIT_ALLOC_SIZE;

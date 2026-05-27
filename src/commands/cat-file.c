@@ -1,4 +1,5 @@
 #include "command.h"
+#include "commit.h"
 #include "helper.h"
 #include "object.h"
 #include "object_store.h"
@@ -119,6 +120,10 @@ int cmd_cat_file(int argc, char **argv, struct repository *repo) {
     t.buf = buf;
     t.size = size;
     tree_pretty_print(&t);
+  } else if (type == OBJ_COMMIT) {
+    struct commit_info info;
+    hydrate_commit_info(&info, buf);
+    pretty_print_commit(&info);
   }
 
   free(buf);

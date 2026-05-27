@@ -54,24 +54,20 @@ int cmd_commit_tree(int argc, char **argv, struct repository *repo) {
     die("Error: %s does not match a tree", tree_hex);
   }
 
-  struct object_id *parent_ids = NULL;
-
-  if (parents.size > 0) {
-    parent_ids = xmalloc(parents.size, struct object_id);
-    char *run = parents.ptr;
-    for (size_t i = 0; i < parents.size; i++) {
-      err = complete_hex(store, run, parent_ids + i);
-      if (err == AMBIGOUS_HEX) {
-        die("Error: %s is ambigous.", run);
-      } else if (err == NO_SUCH_HEX) {
-        die("Error: %s does not match any hex", run);
-      } else if (err == PARTIAL_TOO_SHORT) {
-        die("Error: %s must be at least 3 characters", run);
-      } else if (object_read_type(store, parent_ids + i) != OBJ_COMMIT) {
-        die("Error: %s does not match a commit", run);
-      }
-      run += strlen(run) + 1;
+  struct object_id *parent_ids = xmalloc(parents.size, struct object_id);
+  char *run = parents.ptr;
+  for (size_t i = 0; i < parents.size; i++) {
+    err = complete_hex(store, run, parent_ids + i);
+    if (err == AMBIGOUS_HEX) {
+      die("Error: %s is ambigous.", run);
+    } else if (err == NO_SUCH_HEX) {
+      die("Error: %s does not match any hex", run);
+    } else if (err == PARTIAL_TOO_SHORT) {
+      die("Error: %s must be at least 3 characters", run);
+    } else if (object_read_type(store, parent_ids + i) != OBJ_COMMIT) {
+      die("Error: %s does not match a commit", run);
     }
+    run += strlen(run) + 1;
   }
 
   time_t now = time(NULL);

@@ -16,6 +16,7 @@ struct object {
   int parsed;
 };
 
+#pragma GCC diagnostic ignored "-Wunused-variable"
 static const char *object_type_names[] = {"unknown", "blob", "tree", "commit"};
 
 const char *object_type_to_string(enum object_type type);

@@ -45,7 +45,7 @@ void repository_release(struct repository *repo) {
   }
 
   if (repo->parsed_object_pool)
-    object_store_free(repo->parsed_object_pool);
+    object_pool_free(repo->parsed_object_pool);
 }
 
 char *repo_find_repo_dir() {

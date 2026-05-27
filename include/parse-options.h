@@ -9,6 +9,7 @@ enum option_type {
 
   OPT_INT,
   OPT_STRING,
+  OPT_STRING_ARRAY
 };
 
 enum option_flags {
@@ -16,6 +17,11 @@ enum option_flags {
   OPT_OPTARG = 1 << 1, // Option has optional argument.
   OPT_HASARG = 1 << 2, // Mandetory argument.
   OPT_NONEG = 1 << 3,  // (Boolean) Option cannot be negated.
+};
+
+struct string_array_value {
+  char *ptr;   // List of arguments seperated by a null-terminator.
+  size_t size; // Amount of arguments.
 };
 
 struct option {
@@ -30,44 +36,54 @@ struct option {
   char *help; // Help message of what the option does.
 };
 
-#define MKOPT_STRING(ln, sn, val, ah, h)                                       \
-  {.long_name = (ln),                                                          \
-   .short_name = (sn),                                                         \
-   .type = OPT_STRING,                                                         \
-   .value = &(val),                                                            \
-   .defval = 0,                                                                \
-   .flags = OPT_NONEG | OPT_HASARG,                                            \
-   .argh = (ah),                                                               \
+#define MKOPT_STRING(ln, sn, val, ah, h) \
+  {.long_name = (ln),                    \
+   .short_name = (sn),                   \
+   .type = OPT_STRING,                   \
+   .value = &(val),                      \
+   .defval = 0,                          \
+   .flags = OPT_NONEG | OPT_HASARG,      \
+   .argh = (ah),                         \
    .help = (h)}
 
-#define MKOPT_END                                                              \
-  {.long_name = NULL,                                                          \
-   .short_name = 0,                                                            \
-   .type = OPT_END,                                                            \
-   .value = NULL,                                                              \
-   .defval = 0,                                                                \
-   .flags = 0,                                                                 \
-   .argh = NULL,                                                               \
+#define MKOPT_STRING_ARRAY(ln, sn, val, ah, h) \
+  {.long_name = (ln),                          \
+   .short_name = (sn),                         \
+   .type = OPT_STRING_ARRAY,                   \
+   .value = &(val),                            \
+   .defval = 0,                                \
+   .flags = OPT_NONEG | OPT_HASARG,            \
+   .argh = (ah),                               \
+   .help = (h)}
+
+#define MKOPT_END     \
+  {.long_name = NULL, \
+   .short_name = 0,   \
+   .type = OPT_END,   \
+   .value = NULL,     \
+   .defval = 0,       \
+   .flags = 0,        \
+   .argh = NULL,      \
    .help = NULL}
 
-#define MKOPT_INT(ln, sn, val, ah, h)                                          \
-  {.long_name = (ln),                                                          \
-   .short_name = (sn),                                                         \
-   .type = OPT_INT,                                                            \
-   .value = &(val),                                                            \
-   .defval = 0,                                                                \
-   .flags = OPT_NONEG | OPT_HASARG,                                            \
-   .argh = (ah),                                                               \
+#define MKOPT_INT(ln, sn, val, ah, h) \
+  {.long_name = (ln),                 \
+   .short_name = (sn),                \
+   .type = OPT_INT,                   \
+   .value = &(val),                   \
+   .defval = 0,                       \
+   .flags = OPT_NONEG | OPT_HASARG,   \
+   .argh = (ah),                      \
    .help = (h)}
 
-#define MKOPT_SET_INT_F(ln, sn, val, def, h, f)                                \
-  {.long_name = (ln),                                                          \
-   .short_name = (sn),                                                         \
-   .type = OPT_SET_INT,                                                        \
-   .value = &(val),                                                            \
-   .defval = (def),                                                            \
-   .flags = OPT_NOARG | (f),                                                   \
-   .argh = NULL,                                                               \
+#define MKOPT_SET_INT_F(ln, sn, val, def, h, f) \
+  {.long_name = (ln),                           \
+   .short_name = (sn),                          \
+   .type = OPT_SET_INT,                         \
+   .value = &(val),                             \
+   .defval = (def),                             \
+   .flags = OPT_NOARG | (f),                    \
+   .argh = NULL,                                \
    .help = (h)}
 
 #define MKOPT_BOOL_F(ln, sn, val, h, f) MKOPT_SET_INT_F(ln, sn, val, 1, h, f)

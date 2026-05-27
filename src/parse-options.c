@@ -49,7 +49,7 @@ static char *get_option_argument(int argc, char **argv, int argi) {
   if (form == DASH_DASH)
     return NULL;
   if (form == SHORT_UNSTUCK || form == LONG_UNSTUCK || form == SHORT_MULTIPLE) {
-    if (argi + 1 > argc || argv[argi + 1][0] == '-')
+    if (argi + 1 >= argc || argv[argi + 1][0] == '-')
       return NULL;
 
     char *optarg = argv[argi + 1];
@@ -62,13 +62,16 @@ static char *get_option_argument(int argc, char **argv, int argi) {
   return NULL;
 }
 
-static void handle_optarg(struct option *opt, char *optname, int argc,
+static void handle_optarg(struct option *opt, char *optname, int optname_short, int argc,
                           char **argv, int argi) {
   char *optarg = get_option_argument(argc, argv, argi);
   if (!optarg) {
-    if (opt->flags & OPT_HASARG)
-      die("Error: option %s is missing required argument", optname);
-    else
+    if (opt->flags & OPT_HASARG) {
+      if (!optname_short)
+        die("Error: option %s is missing required argument", optname);
+      else
+        die("Error: option %c is missing required argument", *optname);
+    } else
       memcpy(opt->value, &opt->defval, sizeof(int));
   }
 
@@ -81,6 +84,15 @@ static void handle_optarg(struct option *opt, char *optname, int argc,
     memcpy(opt->value, &a, sizeof(int));
   } else if (opt->type == OPT_STRING) {
     *(char **)opt->value = optarg;
+  } else if (opt->type == OPT_STRING_ARRAY) {
+    struct string_array_value *val = opt->value;
+    val->ptr = optarg;
+    val->size = 0;
+    while (optarg[0] != '-' && argi + val->size + 1 < argc) {
+      optarg += strlen(optarg) + 1;
+      val->size++;
+      argv[argi + val->size] = NULL;
+    }
   }
 }
 
@@ -149,7 +161,7 @@ static void parse_short_unstuck(int argc, char **argv, int argi,
   if (opt->flags & OPT_NOARG) {
     memcpy(opt->value, &opt->defval, sizeof(int));
   } else {
-    handle_optarg(opt, &opt->short_name, argc, argv, argi);
+    handle_optarg(opt, &opt->short_name, 1, argc, argv, argi);
   }
 
   argv[argi] = NULL;
@@ -177,7 +189,7 @@ static void parse_short_multiple(int argc, char **argv, int argi,
   if (last_opt->flags & OPT_NOARG) {
     memcpy(last_opt->value, &last_opt->defval, sizeof(int));
   } else {
-    handle_optarg(last_opt, &last_opt->short_name, argc, argv, argi);
+    handle_optarg(last_opt, &last_opt->short_name, 1, argc, argv, argi);
   }
   argv[argi] = NULL;
 }
@@ -196,7 +208,7 @@ static void parse_long(int argc, char **argv, int argi, struct option *opts) {
     int val = is_neg ? 0 : opt->defval;
     memcpy(opt->value, &val, sizeof(int));
   } else {
-    handle_optarg(opt, opt->long_name, argc, argv, argi);
+    handle_optarg(opt, opt->long_name, 0, argc, argv, argi);
   }
 
   argv[argi] = NULL;

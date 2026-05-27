@@ -270,3 +270,20 @@ void *object_store_read_raw(struct object_store *store, struct object_id *oid,
   fclose(objfile);
   return data;
 }
+
+enum object_type object_read_type(struct object_store *store, struct object_id *oid) {
+  char *path = oid_to_path(store, oid);
+  FILE *objfile = fopen(path, "rb");
+
+  if (!objfile) {
+    struct hex_oid hex;
+    die("Error: failed to read object with id %s", oid_to_hex(oid, &hex));
+  }
+
+  char type_name[10]; // no type name is larger than 9 chars.
+
+  fscanf(objfile, "%s", type_name);
+  fclose(objfile);
+  free(path);
+  return string_to_object_type(type_name);
+}

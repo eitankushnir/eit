@@ -59,4 +59,6 @@ int object_store_write_file(struct object_store *store, enum object_type type,
  */
 void *object_store_read_raw(struct object_store *store, struct object_id *oid,
                             size_t *out_size, enum object_type *out_type);
+
+enum object_type object_read_type(struct object_store *store, struct object_id *oid);
 #endif

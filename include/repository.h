@@ -56,6 +56,7 @@ struct resolved_pathspec *repo_resolve_pathspec_with_ignore(struct repository *r
 enum write_tree_error {
   WRITE_TREE_SUCCESS,
   NOT_MERGED,
+  STAGE_EMPTY,
 };
 
 enum write_tree_error repo_write_stage_as_tree(struct repository *repo, struct object_id *out_oid);

@@ -231,6 +231,10 @@ static enum write_tree_error repo_write_tree_helper(
 
   struct tree t = {0};
   struct stage *s = repo_get_stage(repo);
+  if (s->entries_nr == 0) {
+    return STAGE_EMPTY;
+  }
+
   struct object_store *store = repo_get_object_store(repo);
 
   size_t i = start;
@@ -262,7 +266,13 @@ static enum write_tree_error repo_write_tree_helper(
         new_ent.filename = filename.buf;
         new_ent.mode = 0040000;
 
-        repo_write_tree_helper(repo, &new_ent.oid, new_loc.buf, i, &i);
+        enum write_tree_error e = repo_write_tree_helper(repo, &new_ent.oid, new_loc.buf, i, &i);
+        if (e != WRITE_TREE_SUCCESS) {
+          strbuf_release(&filename);
+          strbuf_release(&new_loc);
+          free(t.buf);
+          return e;
+        }
         tree_add_entry(&t, &new_ent);
 
         strbuf_release(&filename);

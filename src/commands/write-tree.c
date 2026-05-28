@@ -16,7 +16,10 @@ int cmd_write_tree(int argc, char **argv, struct repository *repo) {
 
   argc = parse_options(argc, argv, NULL, usage);
 
-  repo_write_stage_as_tree(repo, &oid);
+  if (repo_write_stage_as_tree(repo, &oid) != WRITE_TREE_SUCCESS) {
+    fprintf(stderr, "Error: Failed to write tree\n");
+    return 1;
+  }
   printf("%s\n", oid_to_hex(&oid, &hex));
   return 0;
 }

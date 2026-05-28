@@ -18,7 +18,7 @@ struct ref_store *ref_store_new(const char *location) {
   strbuf_addf(&heads, "%s/refs/heads", location);
   strbuf_addf(&remotes, "%s/refs/remotes", location);
   strbuf_addf(&tags, "%s/refs/tags", location);
-  strbuf_addf(&tags, "%s/HEAD", location);
+  strbuf_addf(&head, "%s/HEAD", location);
 
   store->branches_location = heads.buf;
   store->remotes_location = remotes.buf;
@@ -28,6 +28,7 @@ struct ref_store *ref_store_new(const char *location) {
 
   store->head_branch = NULL;
   memset(store->head_id.hash, 0, 32);
+  store->head_has_base = 0;
 
   return store;
 }
@@ -63,10 +64,11 @@ void ref_store_parse_head(struct ref_store *store) {
     memcpy(hex.hex, content.buf, 65);
     hex_to_oid(&hex, &store->head_id);
     store->head_mode = HEAD_DETACHED;
+    store->head_has_base = 1;
   } else {
     store->head_branch = strdup(colonptr + 2);
     store->head_mode = HEAD_NORMAL;
-    ref_store_read_branch(store, store->head_branch, &store->head_id);
+    store->head_has_base = ref_store_read_branch(store, store->head_branch, &store->head_id) == 0;
   }
 
   strbuf_release(&content);
@@ -131,12 +133,34 @@ void ref_store_update_head(struct ref_store *store, struct object_id *oid) {
   store->head_id = *oid;
 }
 
-int ref_store_create_branch(struct ref_store *store, const char *base, const char *new_name) {
-  struct object_id id;
-  if (ref_store_read_branch(store, base, &id) != 0)
-    return -1;
+int ref_store_has_branch(struct ref_store *store, const char *branch_name) {
+  char *path = branch_path(store, branch_name);
+  struct stat st;
+  int res = stat(path, &st);
+  free(path);
+  return res == 0;
+}
 
-  ref_store_update_branch(store, new_name, &id);
+void ref_store_attach_head(struct ref_store *store, const char *branch_name) {
+  FILE *headfile = fopen(store->head_location, "wb");
 
-  return 0;
+  if (!headfile)
+    die("Error: Failed to update head");
+
+  fprintf(headfile, "branch: %s", branch_name);
+  store->head_mode = HEAD_NORMAL;
+  store->head_has_base = ref_store_read_branch(store, branch_name, &store->head_id) == 0;
+  fclose(headfile);
+}
+
+void ref_store_detach_head(struct ref_store *store, struct object_id *oid) {
+  FILE *headfile = fopen(store->head_location, "wb");
+
+  if (!headfile)
+    die("Error: Failed to update head");
+
+  struct hex_oid hex;
+  fprintf(headfile, "%s", oid_to_hex(oid, &hex));
+  store->head_mode = HEAD_DETACHED;
+  fclose(headfile);
 }

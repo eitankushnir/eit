@@ -18,6 +18,7 @@ struct ref_store {
 
   char *head_branch; // FOR WHEN IN NORMAL MODE
   struct object_id head_id;
+  int head_has_base;
 };
 
 struct ref_store *ref_store_new(const char *location);
@@ -31,10 +32,11 @@ int ref_store_read_branch(struct ref_store *store, const char *branch_name, stru
 // Make branch_name point to the new oid.
 void ref_store_update_branch(struct ref_store *store, const char *branch_name, struct object_id *oid);
 
+int ref_store_has_branch(struct ref_store *store, const char *branch_name);
+
 // Make HEAD point to a new oid.
 void ref_store_update_head(struct ref_store *store, struct object_id *oid);
-
-// Returns -1 if the creation failed.
-int ref_store_create_branch(struct ref_store *store, const char *base, const char *new_name);
+void ref_store_attach_head(struct ref_store *store, const char *branch_name);
+void ref_store_detach_head(struct ref_store *store, struct object_id *oid);
 
 #endif

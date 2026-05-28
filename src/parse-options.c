@@ -311,6 +311,7 @@ static void print_help(struct option *opts, char **usagestr) {
 
   i = 0;
   int off = get_longest_name(opts) + 8;
+  printf("\n");
   while (opts[i].type != OPT_END) {
     print_option(&opts[i], off);
     i++;

@@ -5,6 +5,7 @@
 #include "object_pool.h"
 #include "object_store.h"
 #include "pathspec.h"
+#include "ref_store.h"
 #include "sha256.h"
 #include "stage.h"
 #include "strbuf.h"
@@ -46,6 +47,9 @@ void repository_release(struct repository *repo) {
 
   if (repo->parsed_object_pool)
     object_pool_free(repo->parsed_object_pool);
+
+  if (repo->refs)
+    ref_store_free(repo->refs);
 }
 
 char *repo_find_repo_dir() {
@@ -161,6 +165,14 @@ struct object_pool *repo_get_pool(struct repository *repo) {
 
   repo->parsed_object_pool = object_pool_new(100);
   return repo->parsed_object_pool;
+}
+
+struct ref_store *repo_get_ref_store(struct repository *repo) {
+  if (repo->refs)
+    return repo->refs;
+
+  repo->refs = ref_store_new(repo->repodir);
+  return repo->refs;
 }
 
 enum staging_error repo_stage_file(struct repository *repo, const char *path) {

@@ -19,6 +19,8 @@ struct repository {
   struct ignores **ignores; // NULL terminated array of all ignore files in the repo.
 
   struct object_pool *parsed_object_pool; // Where all objects that where looked up and parsed live.
+
+  struct ref_store *refs;
 };
 
 enum staging_error {
@@ -46,6 +48,7 @@ struct object_store *repo_get_object_store(struct repository *repo);
 struct stage *repo_get_stage(struct repository *repo);
 struct ignores **repo_get_ignores(struct repository *repo);
 struct object_pool *repo_get_pool(struct repository *repo);
+struct ref_store *repo_get_ref_store(struct repository *repo);
 
 struct resolved_pathspec *repo_resolve_pathspec_with_ignore(struct repository *repo,
                                                             const char *pathspec);

@@ -41,5 +41,10 @@ int cmd_init(int argc, char **argv, struct repository *repo) {
   free(path);
   strbuf_release(&dir);
 
+  struct strbuf headloc = STRBUF_INIT;
+  strbuf_addf(&headloc, "%s/%s", REPO_DIR_NAME, "HEAD");
+  FILE *headfile = fopen(headloc.buf, "wb");
+  fprintf(headfile, "branch: main");
+
   return 0;
 }

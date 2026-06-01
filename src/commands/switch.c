@@ -45,7 +45,7 @@ int cmd_switch(int argc, char **argv, struct repository *repo) {
   char *branch_name = argv[1];
   struct ref_store *s = repo_get_ref_store(repo);
   if (!create && repo_count_worktree_changes(repo) > 0) {
-    die("Error: You have unstage changes");
+    die("Error: You have unstaged changes");
   }
 
   if (create) {
@@ -71,11 +71,9 @@ int cmd_switch(int argc, char **argv, struct repository *repo) {
 
     struct commit *c = object_pool_lookup_commit(repo_get_pool(repo), &s->head_id);
     repo_parse_commit(repo, c);
-    struct stage *s = repo_construct_stage(repo, c->tree);
+    struct stage *new_ver = repo_construct_stage(repo, c->tree);
 
-    for (size_t i = 0; i < s->entries_nr; i++) {
-      printf("%s\n", s->entries[i]->path);
-    }
+    repo_swap_stage(repo, new_ver);
   } else {
     fprintf(stderr, "Error: no branch named %s\n", branch_name);
   }

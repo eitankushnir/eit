@@ -48,7 +48,5 @@ int cmd_add(int argc, char **argv, struct repository *repo) {
   }
 
   free(specs);
-
-  write_stage_disk(repo_get_stage(repo));
   return 0;
 }

@@ -287,3 +287,20 @@ enum object_type object_read_type(struct object_store *store, struct object_id *
   free(path);
   return string_to_object_type(type_name);
 }
+
+void object_store_stream_raw(struct object_store *store, struct object_id *oid, const char *dest) {
+
+  char buf[4096];
+  FILE *destfile = fopen(dest, "wb");
+  char *objpath = oid_to_path(store, oid);
+  FILE *srcfile = fopen(objpath, "rb");
+
+  size_t read;
+  while ((read = fread(buf, sizeof(char), sizeof(buf), srcfile))) {
+    fwrite(buf, sizeof(char), read, destfile);
+  }
+
+  fclose(srcfile);
+  fclose(destfile);
+  free(objpath);
+}

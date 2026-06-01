@@ -13,6 +13,7 @@
 #include "tree.h"
 #include <dirent.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
@@ -34,8 +35,10 @@ void repository_release(struct repository *repo) {
   if (repo->objects)
     object_store_free(repo->objects);
 
-  if (repo->stage)
+  if (repo->stage) {
+    write_stage_disk(repo->stage);
     stage_free(repo->stage);
+  }
 
   if (repo->ignores) {
     size_t i = 0;
@@ -399,7 +402,7 @@ void construct_stage_helper(struct repository *repo, struct tree *tree, const ch
       struct stage_entry *new_ent = xmalloc(1, struct stage_entry);
       new_ent->mode = ent->mode;
       new_ent->path = path.buf;
-      new_ent->path_len = ent->filename_len;
+      new_ent->path_len = path.len;
       new_ent->flags = 0;
       new_ent->oid = ent->oid;
       s->entries[s->entries_nr - 1] = new_ent;
@@ -419,7 +422,7 @@ size_t repo_count_stage_changes(struct repository *repo, struct stage *ver_b) {
 
   struct stage *ver_a = repo_get_stage(repo);
 
-  while (i < ver_a->entries_nr && i < ver_b->entries_nr) {
+  while (i < ver_a->entries_nr && j < ver_b->entries_nr) {
     int cmp = strcmp(ver_a->entries[i]->path, ver_b->entries[j]->path);
     if (cmp == 0) {
       count = oideq(&ver_a->entries[i]->oid, &ver_b->entries[j]->oid) ? count : count + 1;
@@ -442,4 +445,86 @@ size_t repo_count_stage_changes(struct repository *repo, struct stage *ver_b) {
   }
 
   return count;
+}
+
+void repo_pull_blob(struct repository *repo, const char *path, struct object_id *blob_id) {
+
+  struct strbuf loc = STRBUF_INIT;
+  strbuf_addstr(&loc, repo->worktree);
+
+  char *cpy = strdup(path);
+  char *basename = basename_inplace(cpy);
+  char *dirname = strtok(cpy, "/");
+
+  while (dirname != basename) {
+    strbuf_addf(&loc, "/%s", dirname);
+    create_directory(loc.buf);
+    dirname = strtok(NULL, "/");
+  }
+
+  struct object_store *s = repo_get_object_store(repo);
+  object_store_stream_raw(s, blob_id, path);
+
+  strbuf_release(&loc);
+  free(cpy);
+}
+
+void repo_delete_file(struct repository *repo, const char *path) {
+  size_t len = strlen(repo->worktree);
+  struct strbuf fullpath = STRBUF_INIT;
+  strbuf_addf(&fullpath, "%s/%s", repo->worktree, path);
+
+  int res = 0;
+  while (fullpath.len != len || res != 0) {
+    res = remove(fullpath.buf);
+    strbuf_truncate(&fullpath, last_index_of(fullpath.buf, '/'));
+  }
+
+  strbuf_release(&fullpath);
+}
+
+void repo_swap_stage(struct repository *repo, struct stage *new_stage) {
+  struct stage *current = repo_get_stage(repo);
+
+  size_t i = 0;
+  size_t j = 0;
+  while (i < current->entries_nr && j < new_stage->entries_nr) {
+    int cmp = strcmp(current->entries[i]->path, current->entries[j]->path);
+    if (cmp == 0) {
+      if (!oideq(&current->entries[i]->oid, &new_stage->entries[j]->oid))
+        repo_pull_blob(repo, new_stage->entries[j]->path, &new_stage->entries[j]->oid);
+      i++;
+      j++;
+    } else if (cmp < 0) {
+      repo_delete_file(repo, current->entries[i]->path);
+      i++;
+    } else {
+      repo_pull_blob(repo, new_stage->entries[j]->path, &new_stage->entries[j]->oid);
+      j++;
+    }
+  }
+
+  while (i < current->entries_nr) {
+    repo_delete_file(repo, current->entries[i]->path);
+    i++;
+  }
+
+  while (j < new_stage->entries_nr) {
+    repo_pull_blob(repo, new_stage->entries[j]->path, &new_stage->entries[j]->oid);
+    j++;
+  }
+
+  size_t len = strlen(repo->worktree);
+  struct strbuf abspath = STRBUF_INIT;
+  strbuf_addstr(&abspath, repo->worktree);
+  for (i = 0; i < new_stage->entries_nr; i++) {
+    strbuf_addf(&abspath, "/%s", new_stage->entries[i]->path);
+    lstat(abspath.buf, &new_stage->entries[i]->st);
+    strbuf_truncate(&abspath, len);
+  }
+  strbuf_release(&abspath);
+
+  repo->stage = new_stage;
+  new_stage->disk_location = strdup(current->disk_location);
+  stage_free(current);
 }

@@ -65,7 +65,11 @@ size_t repo_count_worktree_changes(struct repository *repo);
 
 // Remake a stage using the paths from a given tree.
 struct stage *repo_construct_stage(struct repository *repo, struct tree *tree);
-size_t repo_count_stage_changes(struct repository *repo, struct stage *new_ver);
+size_t repo_count_stage_changes(struct repository *repo, struct stage *ver_b);
+void repo_swap_stage(struct repository *repo, struct stage *new_stage);
+
+void repo_pull_blob(struct repository *repo, const char *path, struct object_id *blob_id);
+void repo_delete_file(struct repository *repo, const char *path);
 
 // PASRING FUNCTIONS.
 // Takes a pointer (usually generated via a lookup function).

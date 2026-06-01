@@ -37,6 +37,7 @@ void ref_store_free(struct ref_store *store) {
   free(store->branches_location);
   free(store->remotes_location);
   free(store->tags_location);
+  free(store->head_location);
   if (store->head_branch)
     free(store->head_branch);
 

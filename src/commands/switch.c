@@ -1,10 +1,13 @@
 #include "command.h"
+#include "commit.h"
 #include "helper.h"
+#include "object_pool.h"
 #include "object_store.h"
 #include "parse-options.h"
 #include "ref_store.h"
 #include "repository.h"
 #include "sha256.h"
+#include <stddef.h>
 #include <stdio.h>
 
 int cmd_switch(int argc, char **argv, struct repository *repo) {
@@ -41,12 +44,17 @@ int cmd_switch(int argc, char **argv, struct repository *repo) {
 
   char *branch_name = argv[1];
   struct ref_store *s = repo_get_ref_store(repo);
+  if (!create && repo_count_worktree_changes(repo) > 0) {
+    die("Error: You have unstage changes");
+  }
+
   if (create) {
     ref_store_parse_head(s);
     if (s->head_has_base)
       ref_store_update_branch(s, branch_name, &s->head_id);
 
     ref_store_attach_head(s, branch_name);
+
   } else if (detach) {
     struct object_store *os = repo_get_object_store(repo);
     struct object_id new_head;
@@ -60,6 +68,14 @@ int cmd_switch(int argc, char **argv, struct repository *repo) {
     }
   } else if (ref_store_has_branch(s, branch_name)) {
     ref_store_attach_head(s, branch_name);
+
+    struct commit *c = object_pool_lookup_commit(repo_get_pool(repo), &s->head_id);
+    repo_parse_commit(repo, c);
+    struct stage *s = repo_construct_stage(repo, c->tree);
+
+    for (size_t i = 0; i < s->entries_nr; i++) {
+      printf("%s\n", s->entries[i]->path);
+    }
   } else {
     fprintf(stderr, "Error: no branch named %s\n", branch_name);
   }

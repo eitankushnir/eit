@@ -92,7 +92,8 @@ void stage_free(struct stage *s) {
     free(s->entries[i]);
   }
 
-  free(s->disk_location);
+  if (s->disk_location)
+    free(s->disk_location);
   free(s->entries);
   free(s);
 }

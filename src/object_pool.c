@@ -1,11 +1,14 @@
 #include "object_pool.h"
+#include "commit.h"
 #include "helper.h"
 #include "object.h"
 #include "sha256.h"
 #include "tree.h"
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 struct object_pool *object_pool_new(size_t buckets_nr) {
   struct object_pool *p = xmalloc(1, struct object_pool);
   p->buckets_nr = buckets_nr;
@@ -28,6 +31,7 @@ void object_pool_free(struct object_pool *pool) {
   for (size_t i = 0; i < pool->buckets_nr; i++) {
     struct object_bucket *b = pool->buckets[i];
     while (b) {
+      struct hex_oid hex;
       object_free(b->obj);
       struct object_bucket *tmp = b;
       b = b->next;
@@ -87,4 +91,24 @@ struct tree *object_pool_lookup_tree(struct object_pool *pool, struct object_id 
 
   object_pool_insert(pool, (struct object *)new_tree);
   return new_tree;
+}
+
+struct commit *object_pool_lookup_commit(struct object_pool *pool, struct object_id *oid) {
+  struct object *obj = object_pool_lookup(pool, oid);
+  if (obj) {
+    if (obj->type != OBJ_COMMIT) {
+      struct hex_oid hex;
+      die("Fatal: object with oid %s is not a tree", oid_to_hex(oid, &hex));
+    }
+
+    return (struct commit *)obj;
+  }
+
+  struct commit *new_commit = xcalloc(1, struct commit);
+  new_commit->obj.oid = *oid;
+  new_commit->obj.type = OBJ_COMMIT;
+  new_commit->obj.parsed = 0;
+
+  object_pool_insert(pool, (struct object *)new_commit);
+  return new_commit;
 }

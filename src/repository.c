@@ -1,4 +1,5 @@
 #include "repository.h"
+#include "commit.h"
 #include "helper.h"
 #include "ignore.h"
 #include "object.h"
@@ -298,6 +299,31 @@ enum write_tree_error repo_write_stage_as_tree(
   return repo_write_tree_helper(repo, out_oid, "", 0, &end);
 }
 
+size_t repo_count_worktree_changes(struct repository *repo) {
+  struct stage *s = repo_get_stage(repo);
+  size_t count = 0;
+
+  for (size_t i = 0; i < s->entries_nr; i++) {
+    struct strbuf fullpath = STRBUF_INIT;
+    strbuf_addf(&fullpath, "%s/%s", repo->worktree, s->entries[i]->path);
+    struct stat st;
+    if (lstat(fullpath.buf, &st) != 0)
+      count++;
+    else if (st.st_mtim.tv_sec > s->entries[i]->st.st_mtim.tv_sec ||
+             (st.st_mtim.tv_sec == s->entries[i]->st.st_mtim.tv_sec &&
+              st.st_mtim.tv_nsec > s->entries[i]->st.st_mtim.tv_nsec)) {
+      struct object_id oid;
+      object_store_write_file(repo_get_object_store(repo), OBJ_BLOB,
+                              fullpath.buf, &oid, 0);
+      if (!oideq(&s->entries[i]->oid, &oid))
+        count += 1;
+    }
+    strbuf_release(&fullpath);
+  }
+
+  return count;
+}
+
 int repo_parse_tree(struct repository *repo, struct tree *tree) {
   if (tree->obj.parsed)
     return 0;
@@ -319,4 +345,101 @@ int repo_parse_tree(struct repository *repo, struct tree *tree) {
   tree->obj.parsed = 1;
 
   return 0;
+}
+
+int repo_parse_commit(struct repository *repo, struct commit *commit) {
+  if (commit->obj.parsed)
+    return 0;
+
+  struct object_store *store = repo_get_object_store(repo);
+  size_t size;
+  enum object_type type;
+  void *buf = object_store_read_raw(store, &commit->obj.oid, &size, &type);
+  if (!buf)
+    return -1;
+
+  if (type != OBJ_COMMIT) {
+    free(buf);
+    return -1;
+  }
+
+  struct commit_info info;
+  hydrate_commit_info(&info, buf);
+
+  commit->obj.parsed = 1;
+  commit->tree = object_pool_lookup_tree(repo_get_pool(repo), info.tree_oid);
+  repo_parse_tree(repo, commit->tree);
+
+  free(buf);
+  return 0;
+}
+
+void construct_stage_helper(struct repository *repo, struct tree *tree, const char *current_location, struct stage *current_stage) {
+  struct tree_iterator it;
+  tree_get_iterator(tree, &it);
+  struct stage *s = current_stage;
+
+  struct tree_entry *ent;
+  while ((ent = tree_iterate(&it))) {
+    struct strbuf path = STRBUF_INIT;
+    strbuf_addstr(&path, current_location);
+    if (path.len == 0)
+      strbuf_addstr(&path, ent->filename);
+    else
+      strbuf_addf(&path, "/%s", ent->filename);
+
+    if (ent->mode == 0040000) {
+      struct object_pool *pool = repo_get_pool(repo);
+      struct tree *t = object_pool_lookup_tree(pool, &ent->oid);
+      repo_parse_tree(repo, t);
+      construct_stage_helper(repo, t, path.buf, current_stage);
+      strbuf_release(&path);
+    } else {
+      s->entries = xrealloc(s->entries, ++s->entries_nr, struct stage_entry *);
+      struct stage_entry *new_ent = xmalloc(1, struct stage_entry);
+      new_ent->mode = ent->mode;
+      new_ent->path = path.buf;
+      new_ent->path_len = ent->filename_len;
+      new_ent->flags = 0;
+      new_ent->oid = ent->oid;
+      s->entries[s->entries_nr - 1] = new_ent;
+    }
+  }
+}
+
+struct stage *repo_construct_stage(struct repository *repo, struct tree *tree) {
+  struct stage *s = xcalloc(1, struct stage);
+  construct_stage_helper(repo, tree, "", s);
+  return s;
+}
+
+size_t repo_count_stage_changes(struct repository *repo, struct stage *ver_b) {
+  size_t i = 0, j = 0;
+  size_t count = 0;
+
+  struct stage *ver_a = repo_get_stage(repo);
+
+  while (i < ver_a->entries_nr && i < ver_b->entries_nr) {
+    int cmp = strcmp(ver_a->entries[i]->path, ver_b->entries[j]->path);
+    if (cmp == 0) {
+      count = oideq(&ver_a->entries[i]->oid, &ver_b->entries[j]->oid) ? count : count + 1;
+      i++;
+      j++;
+    } else if (cmp < 0)
+      i++;
+    else
+      j++;
+  }
+
+  while (i < ver_a->entries_nr) {
+    count++;
+    i++;
+  }
+
+  while (j < ver_b->entries_nr) {
+    count++;
+    j++;
+  }
+
+  return count;
 }

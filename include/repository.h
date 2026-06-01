@@ -8,6 +8,7 @@
 #include "sha256.h"
 #include "stage.h"
 #include "tree.h"
+#include <stddef.h>
 #define REPO_DIR_NAME ".eit"
 
 struct repository {
@@ -60,11 +61,17 @@ enum write_tree_error {
 };
 
 enum write_tree_error repo_write_stage_as_tree(struct repository *repo, struct object_id *out_oid);
+size_t repo_count_worktree_changes(struct repository *repo);
+
+// Remake a stage using the paths from a given tree.
+struct stage *repo_construct_stage(struct repository *repo, struct tree *tree);
+size_t repo_count_stage_changes(struct repository *repo, struct stage *new_ver);
 
 // PASRING FUNCTIONS.
 // Takes a pointer (usually generated via a lookup function).
 // Hydrates the struct with information from the disk. sets parsed flag to 1.
 // If there is a type mismatch -1 is returned. else 0.
 int repo_parse_tree(struct repository *repo, struct tree *tree);
+int repo_parse_commit(struct repository *repo, struct commit *commit);
 
 #endif

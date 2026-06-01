@@ -31,4 +31,5 @@ struct object *object_pool_lookup(struct object_pool *pool, struct object_id *oi
  * Program will die if oid does not belong to a tree.
  */
 struct tree *object_pool_lookup_tree(struct object_pool *pool, struct object_id *oid);
+struct commit *object_pool_lookup_commit(struct object_pool *pool, struct object_id *oid);
 #endif

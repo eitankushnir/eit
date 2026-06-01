@@ -2,6 +2,7 @@
 #define COMMIT_H
 
 #include "sha256.h"
+#include "tree.h"
 #include <stddef.h>
 #include <time.h>
 struct commit_info {
@@ -20,6 +21,11 @@ struct commit_info {
   const char *committer_tz;
 
   const char *message;
+};
+
+struct commit {
+  struct object obj;
+  struct tree *tree;
 };
 
 // Create a buffer of raw bytes that can be stored on the disk as the commit.

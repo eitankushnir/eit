@@ -295,9 +295,23 @@ void object_store_stream_raw(struct object_store *store, struct object_id *oid, 
   char *objpath = oid_to_path(store, oid);
   FILE *srcfile = fopen(objpath, "rb");
 
+  int header_skipped = 0;
   size_t read;
   while ((read = fread(buf, sizeof(char), sizeof(buf), srcfile))) {
-    fwrite(buf, sizeof(char), read, destfile);
+    if (!header_skipped) {
+      char *header_end = memchr(buf, '\0', read);
+      if (header_end) {
+        header_skipped = 1;
+        size_t header_size = (header_end - buf) + 1;
+        size_t data_in_chunk = read - header_size;
+
+        if (data_in_chunk) {
+          fwrite(header_end + 1, 1, data_in_chunk, destfile);
+        }
+      }
+    } else {
+      fwrite(buf, sizeof(char), read, destfile);
+    }
   }
 
   fclose(srcfile);

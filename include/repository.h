@@ -79,8 +79,8 @@ config *repo_get_local_config(struct repository *repo);
 config *repo_get_global_config(struct repository *repo);
 
 // Wrappers - Check local first then global
-int repo_config_get_bool(struct repository *repo, const char *catergory, const char *key);
-char *repo_config_get_string(struct repository *repo, const char *catergory, const char *key);
+int repo_config_get_bool(struct repository *repo, const char *catergory, const char *key, int default_value);
+char *repo_config_get_string(struct repository *repo, const char *catergory, const char *key, char *default_value);
 
 // PASRING FUNCTIONS.
 // Takes a pointer (usually generated via a lookup function).

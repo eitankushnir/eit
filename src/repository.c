@@ -561,7 +561,7 @@ config *repo_get_global_config(struct repository *repo) {
   return repo->global_config;
 }
 
-int repo_config_get_bool(struct repository *repo, const char *catergory, const char *key) {
+int repo_config_get_bool(struct repository *repo, const char *catergory, const char *key, int default_value) {
   config *c;
   c = repo_get_local_config(repo);
   int res = config_get_bool(c, catergory, key);
@@ -570,10 +570,11 @@ int repo_config_get_bool(struct repository *repo, const char *catergory, const c
 
   c = repo_get_global_config(repo);
   res = config_get_bool(c, catergory, key);
-  return res;
+
+  return res == -1 ? default_value : res;
 }
 
-char *repo_config_get_string(struct repository *repo, const char *catergory, const char *key) {
+char *repo_config_get_string(struct repository *repo, const char *catergory, const char *key, char *default_value) {
   config *c;
   c = repo_get_local_config(repo);
   char *res = config_get_string(c, catergory, key);
@@ -582,5 +583,5 @@ char *repo_config_get_string(struct repository *repo, const char *catergory, con
 
   c = repo_get_global_config(repo);
   res = config_get_string(c, catergory, key);
-  return res;
+  return res == NULL ? default_value : res;
 }

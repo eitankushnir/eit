@@ -61,8 +61,8 @@ int cmd_commit(int argc, char **argv, struct repository *repo) {
   char tz[6];
   strftime(tz, sizeof(tz), "%z", local);
 
-  char *name = repo_config_get_string(repo, "user", "name");
-  char *email = repo_config_get_string(repo, "user", "email");
+  char *name = repo_config_get_string(repo, "user", "name", NULL);
+  char *email = repo_config_get_string(repo, "user", "email", NULL);
   if (!name || !email)
     die("Error: Must provide user.name and user.email in config. (see eit config -h)");
 

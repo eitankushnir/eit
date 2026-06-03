@@ -74,18 +74,24 @@ int cmd_commit_tree(int argc, char **argv, struct repository *repo) {
   struct tm *local = localtime(&now);
   char tz[6];
   strftime(tz, sizeof(tz), "%z", local);
+
+  char *name = repo_config_get_string(repo, "user", "name");
+  char *email = repo_config_get_string(repo, "user", "email");
+  if (!name || !email)
+    die("Error: Must provide user.name and user.email in config. (see eit config -h)");
+
   struct commit_info info = {
       .parent_oids = parent_ids,
       .parent_nr = parents.size,
       .tree_oid = &tree_id,
 
-      .author = "eitan",
-      .author_email = "hi@gm.com",
+      .author = name,
+      .author_email = email,
       .author_time = now,
       .author_tz = tz,
 
-      .committer = "eitan",
-      .committer_email = "hi@g.c",
+      .committer = name,
+      .committer_email = email,
       .commit_time = now,
       .committer_tz = tz,
 

@@ -6,6 +6,8 @@
 #define xcalloc(n, type) (_xcalloc((n), (sizeof(type))))
 #define xrealloc(ptr, n, type) (_xrealloc((ptr), (n), (sizeof(type))))
 
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+
 struct string_list {
   char **values;
   size_t nr;
@@ -41,5 +43,7 @@ int normalize_mode(int mode);
 
 struct string_list *raw_to_lines(void *buf, size_t size);
 void string_list_free(struct string_list *list);
+
+void *file_read_raw(const char *path, size_t *out_size);
 
 #endif

@@ -207,5 +207,42 @@ void string_list_free(struct string_list *list) {
   free(list);
 }
 
-void raw_to_lines(void *buf, size_t size, struct string_list *out) {
+struct string_list *raw_to_lines(void *buf, size_t size) {
+  struct string_list *l = xcalloc(1, struct string_list);
+
+  while (size) {
+    void *newline = memchr(buf, '\n', size);
+    l->values = xrealloc(l->values, ++l->nr, char *);
+    size_t len;
+    if (newline)
+      len = newline - buf + 1;
+    else
+      len = size;
+
+    l->values[l->nr - 1] = xmalloc(len + 1, char);
+    memcpy(l->values[l->nr - 1], buf, len);
+    l->values[l->nr - 1][len] = '\0';
+    buf += len;
+    size -= len;
+  }
+
+  return l;
+}
+
+void *file_read_raw(const char *path, size_t *out_size) {
+
+  FILE *f = fopen(path, "rb");
+  if (!f)
+    return NULL;
+
+  char buf[4096];
+  size_t read;
+  struct strbuf raw_buf = STRBUF_INIT;
+
+  while ((read = fread(buf, sizeof(char), sizeof(buf), f))) {
+    strbuf_addraw(&raw_buf, buf, read);
+  }
+
+  *out_size = raw_buf.len;
+  return raw_buf.buf;
 }

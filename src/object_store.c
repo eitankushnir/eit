@@ -108,7 +108,7 @@ int object_store_write_memory(struct object_store *store, enum object_type type,
   // Create the directory
   struct strbuf dir_path = STRBUF_INIT;
   strbuf_addstr(&dir_path, disk_path);
-  strbuf_truncate(&dir_path, last_index_of(disk_path, '/'));
+  strbuf_setlen(&dir_path, last_index_of(disk_path, '/'));
   mkdir(dir_path.buf, 0755);
 
   FILE *objfile = fopen(disk_path, "wb");
@@ -184,7 +184,7 @@ int object_store_write_file(struct object_store *store, enum object_type type,
   // Create the directory
   struct strbuf dir_path = STRBUF_INIT;
   strbuf_addstr(&dir_path, disk_path);
-  strbuf_truncate(&dir_path, last_index_of(disk_path, '/'));
+  strbuf_setlen(&dir_path, last_index_of(disk_path, '/'));
 
   mkdir(dir_path.buf, 0755);
   FILE *objfile = fopen(disk_path, "wb");

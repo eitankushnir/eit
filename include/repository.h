@@ -1,6 +1,7 @@
 #ifndef REPOSITORY_H
 #define REPOSITORY_H
 
+#include "config.h"
 #include "ignore.h"
 #include "object_pool.h"
 #include "object_store.h"
@@ -22,6 +23,9 @@ struct repository {
   struct object_pool *parsed_object_pool; // Where all objects that where looked up and parsed live.
 
   struct ref_store *refs;
+
+  config *local_config;
+  config *global_config;
 };
 
 enum staging_error {
@@ -70,6 +74,9 @@ void repo_swap_stage(struct repository *repo, struct stage *new_stage);
 
 void repo_pull_blob(struct repository *repo, const char *path, struct object_id *blob_id);
 void repo_delete_file(struct repository *repo, const char *path);
+
+config *repo_get_local_config(struct repository *repo);
+config *repo_get_global_config(struct repository *repo);
 
 // PASRING FUNCTIONS.
 // Takes a pointer (usually generated via a lookup function).

@@ -131,8 +131,8 @@ char *normalize_path(const char *path) {
   char *dirname = strtok(copy, "/");
   while (dirname) {
     if (strcmp(dirname, "..") == 0) {
-      strbuf_truncate(&normalized_path,
-                      last_index_of(normalized_path.buf, '/'));
+      strbuf_setlen(&normalized_path,
+                    last_index_of(normalized_path.buf, '/'));
     } else if (strcmp(dirname, ".") != 0) {
       strbuf_addf(&normalized_path, "/%s", dirname);
     }

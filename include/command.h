@@ -18,5 +18,6 @@ int cmd_cat_file(int argc, char **argv, struct repository *repo);
 int cmd_commit_tree(int argc, char **argv, struct repository *repo);
 int cmd_switch(int argc, char **argv, struct repository *repo);
 int cmd_commit(int argc, char **argv, struct repository *repo);
+int cmd_config(int argc, char **argv, struct repository *repo);
 
 #endif

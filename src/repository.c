@@ -1,5 +1,6 @@
 #include "repository.h"
 #include "commit.h"
+#include "config.h"
 #include "helper.h"
 #include "ignore.h"
 #include "object.h"
@@ -54,6 +55,12 @@ void repository_release(struct repository *repo) {
 
   if (repo->refs)
     ref_store_free(repo->refs);
+
+  if (repo->local_config)
+    config_free(repo->local_config);
+
+  if (repo->global_config)
+    config_free(repo->global_config);
 }
 
 char *repo_find_repo_dir() {
@@ -74,7 +81,7 @@ char *repo_find_repo_dir() {
     }
 
     int last_slash = last_index_of(current_path.buf, '/');
-    strbuf_truncate(&current_path, last_slash);
+    strbuf_setlen(&current_path, last_slash);
 
     struct stat current, parent;
     if (stat(current_path.buf, &current) != 0)
@@ -100,7 +107,7 @@ char *repo_find_repo_worktree() {
 
   strbuf_addstr(&worktree, repodir);
   free(repodir);
-  return strbuf_truncate(&worktree, last_index_of(worktree.buf, '/'));
+  return strbuf_setlen(&worktree, last_index_of(worktree.buf, '/'));
 }
 
 const char *repo_relative_path(struct repository *repo, const char *path) {
@@ -477,7 +484,7 @@ void repo_delete_file(struct repository *repo, const char *path) {
   int res = 0;
   while (fullpath.len != len || res != 0) {
     res = remove(fullpath.buf);
-    strbuf_truncate(&fullpath, last_index_of(fullpath.buf, '/'));
+    strbuf_setlen(&fullpath, last_index_of(fullpath.buf, '/'));
   }
 
   strbuf_release(&fullpath);
@@ -520,11 +527,36 @@ void repo_swap_stage(struct repository *repo, struct stage *new_stage) {
   for (i = 0; i < new_stage->entries_nr; i++) {
     strbuf_addf(&abspath, "/%s", new_stage->entries[i]->path);
     lstat(abspath.buf, &new_stage->entries[i]->st);
-    strbuf_truncate(&abspath, len);
+    strbuf_setlen(&abspath, len);
   }
   strbuf_release(&abspath);
 
   repo->stage = new_stage;
   new_stage->disk_location = strdup(current->disk_location);
   stage_free(current);
+}
+
+config *repo_get_local_config(struct repository *repo) {
+  if (repo->local_config)
+    return repo->local_config;
+
+  struct strbuf path = STRBUF_INIT;
+  strbuf_addf(&path, "%s/%s", repo->repodir, "config");
+
+  repo->local_config = config_read_disk(path.buf);
+  strbuf_release(&path);
+  return repo->local_config;
+}
+
+config *repo_get_global_config(struct repository *repo) {
+
+  if (repo->global_config)
+    return repo->global_config;
+
+  struct strbuf path = STRBUF_INIT;
+  strbuf_addf(&path, "%s/.eitconfig", getenv("HOME"));
+
+  repo->global_config = config_read_disk(path.buf);
+  strbuf_release(&path);
+  return repo->global_config;
 }

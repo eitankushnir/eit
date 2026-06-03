@@ -23,6 +23,7 @@ static struct command commands[] = {
     {"commit-tree", cmd_commit_tree},
     {"switch", cmd_switch},
     {"commit", cmd_commit},
+    {"config", cmd_config},
 };
 
 int main(int argc, char **argv) {

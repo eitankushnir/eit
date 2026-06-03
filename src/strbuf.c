@@ -79,7 +79,7 @@ char *strbuf_addraw(struct strbuf *sb, void *buf, size_t len) {
   return sb->buf;
 }
 
-char *strbuf_truncate(struct strbuf *sb, size_t index) {
+char *strbuf_setlen(struct strbuf *sb, size_t index) {
   if (index > sb->len)
     return NULL;
 

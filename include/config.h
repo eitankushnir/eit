@@ -3,11 +3,6 @@
 
 #include <stddef.h>
 
-struct string_list {
-  char **values;
-  size_t nr;
-};
-
 struct config_bucket {
   struct string_list *list;
   char *cat;

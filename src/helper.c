@@ -198,3 +198,14 @@ int normalize_mode(int mode) {
 
   return -1;
 }
+
+void string_list_free(struct string_list *list) {
+  for (size_t i = 0; i < list->nr; i++) {
+    free(list->values[i]);
+  }
+  free(list->values);
+  free(list);
+}
+
+void raw_to_lines(void *buf, size_t size, struct string_list *out) {
+}

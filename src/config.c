@@ -25,11 +25,7 @@ void config_free(config *c) {
   for (size_t i = 0; i < c->buckets_nr; i++) {
     struct config_bucket *b = c->buckets[i];
     while (b) {
-      for (size_t j = 0; j < b->list->nr; j++) {
-        free(b->list->values[j]);
-      }
-      free(b->list->values);
-      free(b->list);
+      string_list_free(b->list);
       free(b->cat);
       free(b->key);
       struct config_bucket *tmp = b;

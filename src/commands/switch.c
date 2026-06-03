@@ -17,10 +17,12 @@ int cmd_switch(int argc, char **argv, struct repository *repo) {
   }
 
   int create = 0;
+  int force_create = 0;
   int detach = 0;
 
   struct option opts[] = {
       MKOPT_BOOL("create", 'c', create, "Create a new branch"),
+      MKOPT_BOOL("force-create", 'C', force_create, "Create a new branch. Can override existing branches."),
       MKOPT_BOOL("detach", 0, detach, "Enter detatch mode"),
       MKOPT_END,
   };
@@ -28,7 +30,7 @@ int cmd_switch(int argc, char **argv, struct repository *repo) {
   char *usage[] = {
       "Usage: eit switch <branch>",
       "       or",
-      "       eit switch -c <new_branch>",
+      "       eit switch (-c|-C) <new_branch>",
       "       eit switch --detach <commit-ish>",
       NULL,
   };
@@ -38,8 +40,8 @@ int cmd_switch(int argc, char **argv, struct repository *repo) {
   if (argc < 2) {
     die("Error: Missing branch name");
   }
-  if (create & detach) {
-    die("Error: --create and --detatch cannot be used together");
+  if ((create || force_create) & detach) {
+    die("Error: --(force-)create and --detatch cannot be used together");
   }
 
   char *branch_name = argv[1];
@@ -48,8 +50,10 @@ int cmd_switch(int argc, char **argv, struct repository *repo) {
     die("Error: You have unstaged changes");
   }
 
-  if (create) {
+  if (force_create || create) {
     ref_store_parse_head(s);
+    if (ref_store_has_branch(s, branch_name) && !force_create)
+      die("Error: Cannot create branch, %s already exists. Use --force-create.", branch_name);
     if (s->head_has_base)
       ref_store_update_branch(s, branch_name, &s->head_id);
 

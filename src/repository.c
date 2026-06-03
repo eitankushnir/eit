@@ -560,3 +560,27 @@ config *repo_get_global_config(struct repository *repo) {
   strbuf_release(&path);
   return repo->global_config;
 }
+
+int repo_config_get_bool(struct repository *repo, const char *catergory, const char *key) {
+  config *c;
+  c = repo_get_local_config(repo);
+  int res = config_get_bool(c, catergory, key);
+  if (res != -1)
+    return res;
+
+  c = repo_get_global_config(repo);
+  res = config_get_bool(c, catergory, key);
+  return res;
+}
+
+char *repo_config_get_string(struct repository *repo, const char *catergory, const char *key) {
+  config *c;
+  c = repo_get_local_config(repo);
+  char *res = config_get_string(c, catergory, key);
+  if (res)
+    return res;
+
+  c = repo_get_global_config(repo);
+  res = config_get_string(c, catergory, key);
+  return res;
+}

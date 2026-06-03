@@ -78,6 +78,10 @@ void repo_delete_file(struct repository *repo, const char *path);
 config *repo_get_local_config(struct repository *repo);
 config *repo_get_global_config(struct repository *repo);
 
+// Wrappers - Check local first then global
+int repo_config_get_bool(struct repository *repo, const char *catergory, const char *key);
+char *repo_config_get_string(struct repository *repo, const char *catergory, const char *key);
+
 // PASRING FUNCTIONS.
 // Takes a pointer (usually generated via a lookup function).
 // Hydrates the struct with information from the disk. sets parsed flag to 1.

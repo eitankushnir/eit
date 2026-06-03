@@ -129,7 +129,15 @@ char *config_get_string(config *c, const char *category, const char *key) {
 
 int config_get_bool(config *c, const char *catergory, const char *key) {
   char *word = config_get_string(c, catergory, key);
-  return strcmp(word, "true") == 0;
+  if (!word)
+    return -1;
+
+  if (strcmp(word, "true") == 0)
+    return 1;
+  if (strcmp(word, "false") == 0)
+    return 0;
+
+  return -1;
 }
 
 void config_add(config *c, const char *category, const char *key, const char *value) {

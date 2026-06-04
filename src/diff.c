@@ -110,7 +110,8 @@ void print_differences(struct lcs_pairs *pairs, struct string_list *a, struct st
       while (line_a < p.i) {
         printf("- %s", a->values[line_a++]);
       }
-    } else if (line_b < p.j) {
+    }
+    if (line_b < p.j) {
       while (line_b < p.j) {
         printf("+ %s", b->values[line_b++]);
       }
@@ -128,4 +129,97 @@ void print_differences(struct lcs_pairs *pairs, struct string_list *a, struct st
   while (line_b < b->nr) {
     printf("+ %s", b->values[line_b++]);
   }
+}
+
+static enum hunk_type get_hunk_type(size_t a_count, size_t b_count) {
+  if (a_count == 0)
+    return HUNK_ADD;
+  if (b_count == 0)
+    return HUNK_DELETE;
+
+  return HUNK_MOD;
+}
+
+static void add_hunk(struct hunk_list *list, size_t a_start, size_t a_count,
+                     size_t b_start, size_t b_count, enum hunk_type t) {
+  list->hunks = xrealloc(list->hunks, ++list->nr, struct diff_hunk);
+  list->hunks[list->nr - 1].a_start = a_start;
+  list->hunks[list->nr - 1].a_count = a_count;
+  list->hunks[list->nr - 1].b_start = b_start;
+  list->hunks[list->nr - 1].b_count = b_count;
+  list->hunks[list->nr - 1].type = t;
+}
+
+struct hunk_list *hunk_list(struct string_list *a, struct string_list *b) {
+  struct lcs_pairs *pairs = lcs_pairs(a, b);
+  struct hunk_list *l = xcalloc(1, struct hunk_list);
+
+  if (pairs->nr == 0) {
+    add_hunk(l, 0, a->nr, 0, b->nr, HUNK_MOD);
+    lcs_pairs_free(pairs);
+    return l;
+  }
+
+  struct lcs_pair cur = pairs->pairs[0];
+  struct lcs_pair prev;
+
+  if (cur.i > 0 || cur.j > 0) {
+    size_t a_start = 0;
+    size_t b_start = 0;
+    size_t a_count = cur.i;
+    size_t b_count = cur.j;
+    enum hunk_type t = get_hunk_type(a_count, b_count);
+    add_hunk(l, a_start, a_count, b_start, b_count, t);
+  }
+
+  prev = cur;
+  for (size_t i = 1; i < pairs->nr; i++) {
+    cur = pairs->pairs[i];
+
+    size_t a_count = cur.i - prev.i - 1;
+    size_t b_count = cur.j - prev.j - 1;
+    if (a_count != 0 || b_count != 0) {
+      size_t a_start = prev.i + 1;
+      size_t b_start = prev.j + 1;
+      enum hunk_type t = get_hunk_type(a_count, b_count);
+      add_hunk(l, a_start, a_count, b_start, b_count, t);
+    }
+
+    prev = cur;
+  }
+
+  size_t a_count = a->nr - prev.i - 1;
+  size_t b_count = b->nr - prev.j - 1;
+  if (a_count == 0 && b_count == 0) {
+    lcs_pairs_free(pairs);
+    return l;
+  }
+
+  size_t a_start = prev.i + 1;
+  size_t b_start = prev.j + 1;
+  enum hunk_type t = get_hunk_type(a_count, b_count);
+  add_hunk(l, a_start, a_count, b_start, b_count, t);
+
+  lcs_pairs_free(pairs);
+  return l;
+}
+
+void print_hunks(struct hunk_list *l, struct string_list *a, struct string_list *b) {
+
+  for (size_t i = 0; i < l->nr; i++) {
+    struct diff_hunk h = l->hunks[i];
+    printf("@@ -%zu,%zu +%zu,%zu @@\n", h.a_start, h.a_count, h.b_start, h.b_count);
+    for (size_t j = 0; j < h.a_count; j++) {
+      printf("- %s", a->values[j + h.a_start]);
+    }
+
+    for (size_t j = 0; j < h.b_count; j++) {
+      printf("+ %s", b->values[j + h.b_start]);
+    }
+  }
+}
+
+void hunk_list_free(struct hunk_list *l) {
+  free(l->hunks);
+  free(l);
 }

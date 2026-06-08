@@ -158,7 +158,13 @@ int stage_remove_path(struct stage *s, const char *path) {
   for (size_t j = i; j < s->entries_nr - 1; j++) {
     s->entries[j] = s->entries[j + 1];
   }
-  s->entries = xrealloc(s->entries, --s->entries_nr, struct stage_entry *);
+  if (s->entries_nr - 1 == 0) {
+    free(s->entries);
+    s->entries = NULL;
+    s->entries_nr = 0;
+  } else {
+    s->entries = xrealloc(s->entries, --s->entries_nr, struct stage_entry *);
+  }
   return 0;
 }
 

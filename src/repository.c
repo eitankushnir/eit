@@ -240,10 +240,6 @@ static enum write_tree_error repo_write_tree_helper(
 
   struct tree t = {0};
   struct stage *s = repo_get_stage(repo);
-  if (s->entries_nr == 0) {
-    return STAGE_EMPTY;
-  }
-
   struct object_store *store = repo_get_object_store(repo);
 
   size_t i = start;

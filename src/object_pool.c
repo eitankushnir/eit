@@ -76,6 +76,8 @@ struct object *object_pool_lookup(struct object_pool *pool, struct object_id *oi
   while (b) {
     if (oideq(&b->obj->oid, oid))
       return b->obj;
+
+    b = b->next;
   }
 
   return NULL;

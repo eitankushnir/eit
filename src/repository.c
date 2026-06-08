@@ -501,7 +501,7 @@ void repo_swap_stage(struct repository *repo, struct stage *new_stage) {
   size_t i = 0;
   size_t j = 0;
   while (i < current->entries_nr && j < new_stage->entries_nr) {
-    int cmp = strcmp(current->entries[i]->path, current->entries[j]->path);
+    int cmp = strcmp(current->entries[i]->path, new_stage->entries[j]->path);
     if (cmp == 0) {
       if (!oideq(&current->entries[i]->oid, &new_stage->entries[j]->oid))
         repo_pull_blob(repo, new_stage->entries[j]->path, &new_stage->entries[j]->oid);

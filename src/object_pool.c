@@ -23,6 +23,14 @@ static void object_free(struct object *obj) {
     struct tree *t = (struct tree *)obj;
     free(t->buf);
   }
+  if (obj->type == OBJ_COMMIT) {
+    struct commit *c = (struct commit *)obj;
+    while (c->parents) {
+      struct commit_list *tmp = c->parents;
+      c->parents = c->parents->next;
+      free(tmp);
+    }
+  }
 
   free(obj);
 }
@@ -88,6 +96,7 @@ struct tree *object_pool_lookup_tree(struct object_pool *pool, struct object_id 
   new_tree->obj.oid = *oid;
   new_tree->obj.type = OBJ_TREE;
   new_tree->obj.parsed = 0;
+  new_tree->obj.flags = 0;
 
   object_pool_insert(pool, (struct object *)new_tree);
   return new_tree;
@@ -108,6 +117,7 @@ struct commit *object_pool_lookup_commit(struct object_pool *pool, struct object
   new_commit->obj.oid = *oid;
   new_commit->obj.type = OBJ_COMMIT;
   new_commit->obj.parsed = 0;
+  new_commit->obj.flags = 0;
 
   object_pool_insert(pool, (struct object *)new_commit);
   return new_commit;

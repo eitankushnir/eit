@@ -23,8 +23,16 @@ struct commit_info {
   const char *message;
 };
 
+struct commit_list {
+  struct commit *item;
+  struct commit_list *next;
+};
+
 struct commit {
   struct object obj;
+  time_t date;
+
+  struct commit_list *parents;
   struct tree *tree;
 };
 
@@ -35,5 +43,11 @@ void *write_commit(struct commit_info *info, size_t *out_size);
 // The buffer still owns the data.
 void hydrate_commit_info(struct commit_info *info, void *buf);
 void pretty_print_commit(struct commit_info *info);
+
+struct commit_list *commit_list_push(struct commit_list *l, struct commit *item);
+struct commit_list *commit_list_push_sorted(struct commit_list *l, struct commit *item);
+
+struct commit_list *commit_merge_bases(struct commit *c1, struct commit *c2);
+void commit_list_free(struct commit_list *head);
 
 #endif

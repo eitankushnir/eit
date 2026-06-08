@@ -8,13 +8,14 @@
 #include "repository.h"
 #include "sha256.h"
 #include "stage.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
 int cmd_commit(int argc, char **argv, struct repository *repo) {
 
   if (!repo->repodir) {
-    die("Cannot run commit-tree outside of a repository");
+    die("Cannot run commit outside of a repository");
   }
 
   const char *message;
@@ -68,7 +69,7 @@ int cmd_commit(int argc, char **argv, struct repository *repo) {
 
   struct commit_info info = {
       .parent_oids = parent_id,
-      .parent_nr = 1,
+      .parent_nr = refs->head_has_base ? 1 : 0,
       .tree_oid = &tree_oid,
 
       .author = name,

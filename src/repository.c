@@ -380,6 +380,17 @@ int repo_parse_commit(struct repository *repo, struct commit *commit) {
   commit->tree = object_pool_lookup_tree(repo_get_pool(repo), info.tree_oid);
   repo_parse_tree(repo, commit->tree);
 
+  commit->date = info.commit_time;
+  commit->parents = NULL;
+  for (size_t i = 0; i < info.parent_nr; i++) {
+    struct commit *parent = object_pool_lookup_commit(repo_get_pool(repo), &info.parent_oids[i]);
+    repo_parse_commit(repo, parent);
+    struct commit_list *new_node = xmalloc(1, struct commit_list);
+    new_node->item = parent;
+    new_node->next = commit->parents;
+    commit->parents = new_node;
+  }
+
   free(buf);
   return 0;
 }

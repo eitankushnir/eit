@@ -23,7 +23,78 @@ void resolved_pathspec_free(struct resolved_pathspec *rp) {
   free(rp);
 }
 
-static char **get_all_subentries(const char *path, size_t *out_n,
+int fs_iterator_next(struct path_iterator *iter, const char **path_out) {
+  struct fs_iterator *fs = (struct fs_iterator *)iter;
+
+  while (fs->count > 0) {
+    char *current = fs->path_stack[--fs->count];
+    struct stat st;
+    if (lstat(current, &st) != 0) {
+      free(current);
+      continue;
+    } else if (!S_ISDIR(st.st_mode)) {
+      *path_out = current;
+      return 0;
+    }
+
+    DIR *d = opendir(current);
+    if (!d) {
+      free(current);
+      continue;
+    }
+
+    struct dirent *ent;
+    while ((ent = readdir(d))) {
+      if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+        continue;
+
+      struct strbuf fullpath = STRBUF_INIT;
+      strbuf_addf(&fullpath, "%s/%s", current, ent->d_name);
+      if (fs->alloc < ++fs->count) {
+        fs->path_stack = xrealloc(fs->path_stack, fs->count * 2, char *);
+        fs->alloc = fs->count * 2;
+      }
+      fs->path_stack[fs->count - 1] = fullpath.buf;
+    }
+
+    closedir(d);
+    free(current);
+    continue;
+  }
+
+  return -1; // EOF
+}
+
+struct path_iterator *fs_iterator_create(const char *starting_point) {
+  struct fs_iterator *fs = xmalloc(1, struct fs_iterator);
+  fs->alloc = 10;
+  fs->count = 1;
+  fs->path_stack = xmalloc(fs->alloc, char *);
+  fs->path_stack[0] = normalize_path(starting_point);
+
+  fs->iter.next = fs_iterator_next;
+  fs->iter.free = fs_iterator_free;
+  return (struct path_iterator *)fs;
+}
+
+void fs_iterator_free(struct path_iterator *iter) {
+  struct fs_iterator *fs = (struct fs_iterator *)iter;
+  free(fs->path_stack);
+  free(fs);
+}
+
+void pathspec_add(struct pathspec *spec, const char *pattern, int flags) {
+  if (spec->alloc < ++spec->nr) {
+    spec->alloc = spec->nr * 2;
+    spec->items = xrealloc(spec->items, spec->alloc, struct pathspec_item);
+  }
+
+  struct pathspec_item *item = spec->items + spec->nr - 1;
+  item->flags = flags;
+  item
+}
+
+/* static char **get_all_subentries(const char *path, size_t *out_n,
                                  filter dont_go_in, void *userdata,
                                  int *is_dir) {
   if (dont_go_in && dont_go_in(path, userdata)) {
@@ -155,4 +226,4 @@ struct resolved_pathspec *resolve_pathspec(const char *pathspec, filter filter,
 
   qsort(rp->matching_paths, rp->nr, sizeof(char *), cmp);
   return rp;
-}
+} */

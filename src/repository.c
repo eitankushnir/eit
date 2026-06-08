@@ -152,21 +152,26 @@ struct ignores **repo_get_ignores(struct repository *repo) {
   if (repo->ignores)
     return repo->ignores;
 
-  // allocate (lazy init)
+  // // allocate (lazy init)
   struct strbuf ignores_spec = STRBUF_INIT;
   strbuf_addf(&ignores_spec, "%s/%s", repo->worktree, "*.eitignore");
-  struct resolved_pathspec *ignores =
-      resolve_pathspec(ignores_spec.buf, dont_go_into_repo_dir, NULL);
+  struct path_iterator *fs = fs_iterator_create(repo->worktree);
+  ((struct fs_iterator *)fs)->filter_func = dont_go_into_repo_dir;
 
-  strbuf_release(&ignores_spec);
+  struct pathspec spec = PATHSPEC_INIT;
+  pathspec_add(&spec, ignores_spec.buf);
 
-  repo->ignores = xmalloc(ignores->nr + 1, struct ignores *);
-  for (size_t i = 0; i < ignores->nr; i++) {
-    repo->ignores[i] = parse_ignores(ignores->matching_paths[i]);
+  const char *path;
+  size_t nr = 0;
+  while (fs->next(fs, &path) == 0) {
+    if (pathspec_match(&spec, path)) {
+      repo->ignores = xrealloc(repo->ignores, ++nr, struct ignores);
+      repo->ignores[nr - 1] = parse_ignores(path);
+    }
   }
-  repo->ignores[ignores->nr] = NULL;
 
-  resolved_pathspec_free(ignores);
+  repo->ignores = xrealloc(repo->ignores, ++nr, struct ignores);
+  repo->ignores[nr - 1] = NULL;
   return repo->ignores;
 }
 
@@ -212,7 +217,7 @@ enum staging_error repo_stage_file(struct repository *repo, const char *path) {
 }
 
 static int filter_ignored(const char *path, void *ignores) {
-  if (strstr(path, ".eit") || strstr(path, ".git"))
+  if (ends_with(path, REPO_DIR_NAME) || ends_with(path, ".git"))
     return 1;
 
   struct ignores **ig = (struct ignores **)ignores;
@@ -224,13 +229,6 @@ static int filter_ignored(const char *path, void *ignores) {
   }
 
   return 0;
-}
-
-struct resolved_pathspec *repo_resolve_pathspec_with_ignore(
-    struct repository *repo,
-    const char *pathspec) {
-
-  return resolve_pathspec(pathspec, filter_ignored, repo_get_ignores(repo));
 }
 
 static enum write_tree_error repo_write_tree_helper(
@@ -595,4 +593,49 @@ char *repo_config_get_string(struct repository *repo, const char *catergory, con
   c = repo_get_global_config(repo);
   res = config_get_string(c, catergory, key);
   return res == NULL ? default_value : res;
+}
+
+struct path_iterator *repo_path_iterator_create(struct repository *repo) {
+  struct repo_path_iterator *rp = xmalloc(1, struct repo_path_iterator);
+  rp->repo = repo;
+  rp->stage = repo_get_stage(repo);
+  rp->fs = (struct fs_iterator *)fs_iterator_create(repo->worktree);
+  rp->has_fs = rp->fs->iter.next(&rp->fs->iter, &rp->fs_preload) == 0;
+  rp->fs->filter_func = filter_ignored;
+  rp->fs->filter_data = repo_get_ignores(repo);
+  rp->stage_idx = 0;
+
+  rp->iter.next = repo_path_iterator_next;
+  rp->iter.free = repo_path_iterator_free;
+
+  return (struct path_iterator *)rp;
+}
+
+int repo_path_iterator_next(struct path_iterator *iter, const char **out_path) {
+  struct repo_path_iterator *rp = (struct repo_path_iterator *)iter;
+  if (rp->stage_idx < rp->stage->entries_nr) {
+    struct strbuf fullpath = STRBUF_INIT;
+    char *path = rp->stage->entries[rp->stage_idx++]->path;
+    strbuf_addf(&fullpath, "%s/%s", rp->repo->worktree, path);
+    *out_path = fullpath.buf;
+    return 0;
+  }
+
+  while (rp->has_fs && stage_has_path(rp->stage, repo_relative_path(rp->repo, rp->fs_preload))) {
+    rp->has_fs = rp->fs->iter.next(&rp->fs->iter, &rp->fs_preload) == 0;
+  }
+
+  if (rp->has_fs) {
+    *out_path = rp->fs_preload;
+    rp->has_fs = rp->fs->iter.next(&rp->fs->iter, &rp->fs_preload) == 0;
+    return 0;
+  } else {
+    return -1;
+  }
+}
+
+void repo_path_iterator_free(struct path_iterator *iter) {
+  struct repo_path_iterator *rp = xmalloc(1, struct repo_path_iterator);
+  rp->fs->iter.free(&rp->fs->iter);
+  free(rp);
 }

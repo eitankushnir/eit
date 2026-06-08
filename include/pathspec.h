@@ -34,13 +34,11 @@ struct pathspec_item {
 
   size_t len;
   size_t len_noglob;
-
-  int flags;
 };
 
 struct pathspec {
-  int nr;
-  int alloc;
+  size_t nr;
+  size_t alloc;
   struct pathspec_item *items;
 };
 
@@ -55,6 +53,12 @@ struct pathspec {
  * Returns an owning pointer a the list of absolute paths that matched the pathspec.
  */
 
-void pathspec_add(struct pathspec *spec, const char *pattern, int flags);
-bool resolve_pathspec(const char *pathspec, struct path_iterator *iter);
+void pathspec_add(struct pathspec *spec, const char *pattern);
+void pathspec_release(struct pathspec *spec);
+
+/*
+ * Returns true if path matches a pattern in spec.
+ * Expects an absolute path.
+ */
+bool pathspec_match(struct pathspec *spec, const char *path);
 #endif

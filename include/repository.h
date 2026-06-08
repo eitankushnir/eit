@@ -89,4 +89,21 @@ char *repo_config_get_string(struct repository *repo, const char *catergory, con
 int repo_parse_tree(struct repository *repo, struct tree *tree);
 int repo_parse_commit(struct repository *repo, struct commit *commit);
 
+// PATHSPEC RESOLVER
+struct repo_path_iterator {
+  struct path_iterator iter;
+
+  struct fs_iterator *fs;
+  const char *fs_preload;
+  bool has_fs;
+
+  struct repository *repo;
+  struct stage *stage;
+  size_t stage_idx;
+};
+
+struct path_iterator *repo_path_iterator_create(struct repository *repo);
+int repo_path_iterator_next(struct path_iterator *iter, const char **out_path);
+void repo_path_iterator_free(struct path_iterator *iter);
+
 #endif

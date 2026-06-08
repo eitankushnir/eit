@@ -3,11 +3,13 @@
 #include "helper.h"
 #include "object_pool.h"
 #include "parse-options.h"
+#include "pathspec.h"
 #include "ref_store.h"
 #include "repository.h"
 #include "sha256.h"
 #include "stage.h"
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 
 int cmd_merge(int argc, char **argv, struct repository *repo) {

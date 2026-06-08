@@ -26,6 +26,7 @@ static struct command commands[] = {
     {"config", cmd_config},
     {"diff", cmd_diff},
     {"merge-base", cmd_merge_base},
+    {"merge", cmd_merge},
 };
 
 int main(int argc, char **argv) {

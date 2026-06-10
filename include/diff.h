@@ -59,5 +59,6 @@ bool hunk_collision(struct hunk_list *a, struct hunk_list *b);
  * If there are conflicts the list if returned with Conflict markers. and out_conflicts is set true.
  * If there are not conflicts then out_conflicts is set false.
  */
-struct string_list *merge_diffs(struct string_list *base, struct string_list *a, struct string_list *b, const char *a_name, const char *b_name, bool *out_conflicts);
+struct string_list *merge_diff_3_way(struct string_list *base, struct string_list *a, struct string_list *b, const char *a_name, const char *b_name, bool *out_conflicts);
+struct string_list *merge_diff_2_way(struct string_list *a, struct string_list *b, const char *a_name, const char *b_name, bool *out_conflicts);
 #endif

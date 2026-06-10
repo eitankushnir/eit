@@ -255,7 +255,7 @@ bool hunk_collision(struct hunk_list *a, struct hunk_list *b) {
   return false;
 }
 
-struct string_list *merge_diffs(struct string_list *base, struct string_list *a, struct string_list *b, const char *a_name, const char *b_name, bool *out_conflicts) {
+struct string_list *merge_diff_3_way(struct string_list *base, struct string_list *a, struct string_list *b, const char *a_name, const char *b_name, bool *out_conflicts) {
   struct string_list *merge = xcalloc(1, struct string_list);
   struct hunk_list *a_hunks = hunk_list(base, a);
   struct hunk_list *b_hunks = hunk_list(base, b);
@@ -264,12 +264,13 @@ struct string_list *merge_diffs(struct string_list *base, struct string_list *a,
   size_t j = 0;
 
   size_t prev_end = 0;
+  *out_conflicts = false;
   while (i < a_hunks->nr && j < b_hunks->nr) {
     struct diff_hunk hunk_a = a_hunks->hunks[i];
     struct diff_hunk hunk_b = b_hunks->hunks[j];
 
     for (size_t k = prev_end; k < MIN(hunk_a.a_start, hunk_b.a_start); k++) {
-      string_list_insert(merge, "%s", base->values[prev_end + k]);
+      string_list_insert(merge, "%s", base->values[k]);
     }
 
     size_t a_start = hunk_a.a_start;
@@ -307,6 +308,7 @@ struct string_list *merge_diffs(struct string_list *base, struct string_list *a,
       i++;
       j++;
       *out_conflicts = true;
+      prev_end = MAX(hunk_a.a_start + hunk_a.a_count, hunk_b.a_count + hunk_b.a_start);
     }
 
     if (a_end < b_start) {
@@ -341,18 +343,62 @@ struct string_list *merge_diffs(struct string_list *base, struct string_list *a,
       string_list_insert(merge, "%s", base->values[prev_end + k]);
     }
 
-    for (size_t k = 0; k < b_hunks->hunks[i].b_count; k++) {
-      string_list_insert(merge, "%s", b->values[k + b_hunks->hunks[i].b_start]);
+    for (size_t k = 0; k < b_hunks->hunks[j].b_count; k++) {
+      string_list_insert(merge, "%s", b->values[k + b_hunks->hunks[j].b_start]);
     }
-    prev_end = b_hunks->hunks[i].a_start + b_hunks->hunks[i].a_count;
+    prev_end = b_hunks->hunks[j].a_start + b_hunks->hunks[i].a_count;
     j++;
   }
 
-  for (size_t k = prev_end + 1; k < base->nr; k++) {
+  for (size_t k = prev_end; k < base->nr; k++) {
     string_list_insert(merge, "%s", base->values[k]);
   }
 
   hunk_list_free(a_hunks);
   hunk_list_free(b_hunks);
+  return merge;
+}
+
+struct string_list *merge_diff_2_way(struct string_list *a, struct string_list *b, const char *a_name, const char *b_name, bool *out_conflicts) {
+  struct hunk_list *hunks = hunk_list(a, b);
+  struct string_list *merge = xcalloc(1, struct string_list);
+
+  size_t prev_end_a = 0;
+  *out_conflicts = false;
+  for (size_t i = 0; i < hunks->nr; i++) {
+    struct diff_hunk hunk = hunks->hunks[i];
+    for (size_t k = prev_end_a; k < hunk.a_start; k++) {
+      string_list_insert(merge, "%s", a->values[k]);
+    }
+
+    if (hunk.a_count && hunk.b_count) {
+      string_list_insert(merge, "<<<<<<<<<<<< %s\n", a_name);
+      for (size_t j = 0; j < hunk.a_count; j++) {
+        string_list_insert(merge, "%s", a->values[hunk.a_start + j]);
+      }
+      string_list_insert(merge, "============\n");
+      for (size_t j = 0; j < hunk.b_count; j++) {
+        string_list_insert(merge, "%s", b->values[hunk.b_start + j]);
+      }
+      string_list_insert(merge, ">>>>>>>>>>>> %s\n", b_name);
+      *out_conflicts = true;
+    }
+
+    else if (hunk.a_count) {
+      for (size_t j = 0; j < hunk.a_count; j++) {
+        string_list_insert(merge, "%s", a->values[hunk.a_start + j]);
+      }
+    } else {
+      for (size_t j = 0; j < hunk.b_count; j++) {
+        string_list_insert(merge, "%s", b->values[hunk.b_start + j]);
+      }
+    }
+    prev_end_a = hunk.a_start + hunk.a_count;
+  }
+
+  for (size_t k = prev_end_a; k < a->nr; k++) {
+    string_list_insert(merge, "%s", a->values[k]);
+  }
+
   return merge;
 }

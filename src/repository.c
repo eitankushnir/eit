@@ -443,10 +443,13 @@ size_t repo_count_stage_changes(struct repository *repo, struct stage *ver_b) {
       count = oideq(&ver_a->entries[i]->oid, &ver_b->entries[j]->oid) ? count : count + 1;
       i++;
       j++;
-    } else if (cmp < 0)
+    } else if (cmp < 0) {
       i++;
-    else
+      count++;
+    } else {
+      count++;
       j++;
+    }
   }
 
   while (i < ver_a->entries_nr) {
@@ -639,7 +642,24 @@ void repo_path_iterator_free(struct path_iterator *iter) {
   free(rp);
 }
 
-void repo_stage_conflict(struct repository *repo, struct stage_entry *base, struct stage_entry *a, struct stage_entry *b, struct string_list *conflicted_merge) {
+void repo_stage_3way_conflict(struct repository *repo, struct stage_entry *base, struct stage_entry *a, struct stage_entry *b, struct string_list *conflicted_merge) {
+  FILE *conflict = fopen(base->path, "wb");
+  for (size_t i = 0; i < conflicted_merge->nr; i++) {
+    fputs(conflicted_merge->values[i], conflict);
+  }
+  fclose(conflict);
+
+  stage_remove_path(repo_get_stage(repo), base->path);
+  base->st.st_mode = base->mode;
+  a->st.st_mode = a->mode;
+  b->st.st_mode = b->mode;
+
+  stage_add_path(repo_get_stage(repo), base->path, base->st, &base->oid, 1);
+  stage_add_path(repo_get_stage(repo), a->path, a->st, &a->oid, 2);
+  stage_add_path(repo_get_stage(repo), b->path, b->st, &b->oid, 3);
+}
+
+void repo_stage_2way_conflict(struct repository *repo, struct stage_entry *a, struct stage_entry *b, struct string_list *conflicted_merge) {
   FILE *conflict = fopen(a->path, "wb");
   for (size_t i = 0; i < conflicted_merge->nr; i++) {
     fputs(conflicted_merge->values[i], conflict);
@@ -650,10 +670,14 @@ void repo_stage_conflict(struct repository *repo, struct stage_entry *base, stru
   a->st.st_mode = a->mode;
   b->st.st_mode = b->mode;
 
-  if (base) {
-    base->st.st_mode = base->mode;
-    stage_add_path(repo_get_stage(repo), base->path, base->st, &base->oid, 1);
-  }
-  stage_add_path(repo_get_stage(repo), a->path, a->st, &a->oid, 2);
-  stage_add_path(repo_get_stage(repo), b->path, b->st, &b->oid, 3);
+  stage_add_path(repo_get_stage(repo), a->path, a->st, &a->oid, 3);
+  stage_add_path(repo_get_stage(repo), b->path, b->st, &b->oid, 4);
+}
+
+void repo_stage_mod_del_conflict(struct repository *repo, struct stage_entry *a) {
+  repo_pull_blob(repo, a->path, &a->oid);
+  stage_remove_path(repo_get_stage(repo), a->path);
+  a->st.st_mode = a->mode;
+
+  stage_add_path(repo_get_stage(repo), a->path, a->st, &a->oid, 5);
 }

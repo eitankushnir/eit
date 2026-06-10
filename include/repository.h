@@ -107,6 +107,8 @@ struct path_iterator *repo_path_iterator_create(struct repository *repo);
 int repo_path_iterator_next(struct path_iterator *iter, const char **out_path);
 void repo_path_iterator_free(struct path_iterator *iter);
 
-void repo_stage_conflict(struct repository *repo, struct stage_entry *base, struct stage_entry *a, struct stage_entry *b, struct string_list *conflicted_merge);
+void repo_stage_3way_conflict(struct repository *repo, struct stage_entry *base, struct stage_entry *a, struct stage_entry *b, struct string_list *conflicted_merge);
+void repo_stage_2way_conflict(struct repository *repo, struct stage_entry *a, struct stage_entry *b, struct string_list *conflicted_merge);
+void repo_stage_mod_del_conflict(struct repository *repo, struct stage_entry *a);
 
 #endif

@@ -121,7 +121,10 @@ int cmd_merge(int argc, char **argv, struct repository *repo) {
     struct stage_entry *b_ent = their_mods->entries[j];
     int cmp = strcmp(a_ent->path, b_ent->path);
     if (cmp == 0) {
-      die("CONFLICT %s was deleted in current branch but modified in %s", a_ent->path, merge_condidate);
+      repo_stage_mod_del_conflict(repo, b_ent);
+      printf("Conflict: %s was deleted in current branch but modified in %s. Keep using eit add, remove using eit rm.\n", b_ent->path, merge_condidate);
+      i++;
+      j++;
     } else if (cmp < 0) {
       i++;
     } else {
@@ -136,7 +139,10 @@ int cmd_merge(int argc, char **argv, struct repository *repo) {
     struct stage_entry *b_ent = our_mods->entries[j];
     int cmp = strcmp(a_ent->path, b_ent->path);
     if (cmp == 0) {
-      die("CONFLICT %s was deleted in %s but modified in current branch", a_ent->path, merge_condidate);
+      repo_stage_mod_del_conflict(repo, b_ent);
+      printf("Conflict: %s was deleted in current branch but modified in %s. Keep using eit add, remove using eit rm.\n", b_ent->path, merge_condidate);
+      i++;
+      j++;
     } else if (cmp < 0) {
       i++;
     } else {
@@ -171,8 +177,8 @@ int cmd_merge(int argc, char **argv, struct repository *repo) {
       bool is_conflict;
       struct string_list *merge = merge_diff_3_way(base, a, b, "HEAD", merge_condidate, &is_conflict);
       if (is_conflict) {
-        printf("Conflict found while merging file: %s\n", base_ent->path);
-        repo_stage_conflict(repo, base_ent, a_ent, b_ent, merge);
+        printf("Conflict found while merging file: %s\n. Conflict markers inserted. Edit to your liking and re-stage with eit add.", base_ent->path);
+        repo_stage_3way_conflict(repo, base_ent, a_ent, b_ent, merge);
       }
 
       free(a_raw);
@@ -211,8 +217,8 @@ int cmd_merge(int argc, char **argv, struct repository *repo) {
       bool conflict;
       struct string_list *merge = merge_diff_2_way(a, b, "HEAD", merge_condidate, &conflict);
       if (conflict) {
-        printf("Conflict found while merging file: %s\n", a_ent->path);
-        repo_stage_conflict(repo, NULL, a_ent, b_ent, merge);
+        printf("Conflict found while merging file: %s\n. Conflict markers inserted. Edit to your liking and re-stage with eit add.", a_ent->path);
+        repo_stage_2way_conflict(repo, a_ent, b_ent, merge);
       }
       i++;
       j++;

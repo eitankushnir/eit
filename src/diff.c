@@ -400,5 +400,7 @@ struct string_list *merge_diff_2_way(struct string_list *a, struct string_list *
     string_list_insert(merge, "%s", a->values[k]);
   }
 
+  hunk_list_free(hunks);
+
   return merge;
 }

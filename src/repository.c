@@ -681,3 +681,13 @@ void repo_stage_mod_del_conflict(struct repository *repo, struct stage_entry *a)
 
   stage_add_path(repo_get_stage(repo), a->path, a->st, &a->oid, 5);
 }
+
+void repo_stage_merge(struct repository *repo, struct string_list *merge, const char *path) {
+  FILE *mergefile = fopen(path, "wb");
+  for (size_t i = 0; i < merge->nr; i++) {
+    fputs(merge->values[i], mergefile);
+  }
+  fclose(mergefile);
+
+  repo_stage_file(repo, path);
+}

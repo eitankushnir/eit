@@ -150,6 +150,12 @@ int cmd_merge(int argc, char **argv, struct repository *repo) {
     }
   }
 
+  while (i < their_dels->entries_nr) {
+    repo_delete_file(repo, their_dels->entries[i]->path);
+    stage_remove_path(repo_get_stage(repo), their_dels->entries[i]->path);
+    i++;
+  }
+
   // MOD-MOD conflicts
   i = 0;
   j = 0;
@@ -177,8 +183,10 @@ int cmd_merge(int argc, char **argv, struct repository *repo) {
       bool is_conflict;
       struct string_list *merge = merge_diff_3_way(base, a, b, "HEAD", merge_condidate, &is_conflict);
       if (is_conflict) {
-        printf("Conflict found while merging file: %s\n. Conflict markers inserted. Edit to your liking and re-stage with eit add.", base_ent->path);
+        printf("Conflict found while merging file: %s. Conflict markers inserted. Edit to your liking and re-stage with eit add.\n", base_ent->path);
         repo_stage_3way_conflict(repo, base_ent, a_ent, b_ent, merge);
+      } else {
+        repo_stage_merge(repo, merge, a_ent->path);
       }
 
       free(a_raw);
@@ -196,6 +204,12 @@ int cmd_merge(int argc, char **argv, struct repository *repo) {
     } else {
       j++;
     }
+  }
+
+  while (j < their_mods->entries_nr) {
+    repo_pull_blob(repo, their_mods->entries[j]->path, &their_mods->entries[j]->oid);
+    repo_stage_file(repo, their_mods->entries[j]->path);
+    j++;
   }
 
   // ADD-ADD conflicts
@@ -219,7 +233,16 @@ int cmd_merge(int argc, char **argv, struct repository *repo) {
       if (conflict) {
         printf("Conflict found while merging file: %s\n. Conflict markers inserted. Edit to your liking and re-stage with eit add.", a_ent->path);
         repo_stage_2way_conflict(repo, a_ent, b_ent, merge);
+      } else {
+        repo_stage_merge(repo, merge, a_ent->path);
       }
+
+      free(a_raw);
+      free(b_raw);
+      string_list_free(a);
+      string_list_free(b);
+      string_list_free(merge);
+
       i++;
       j++;
     } else if (cmp < 0) {
@@ -227,6 +250,12 @@ int cmd_merge(int argc, char **argv, struct repository *repo) {
     } else {
       j++;
     }
+  }
+
+  while (j < their_adds->entries_nr) {
+    repo_pull_blob(repo, their_adds->entries[j]->path, &their_mods->entries[j]->oid);
+    repo_stage_file(repo, their_adds->entries[j]->path);
+    j++;
   }
 
   commit_list_free(bases);

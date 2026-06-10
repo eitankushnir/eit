@@ -11,7 +11,7 @@ struct stage_entry {
   int mode;
   char *path;
   size_t path_len;
-  int flags;
+  unsigned int flags;
 };
 
 struct stage {
@@ -37,7 +37,7 @@ void stage_free(struct stage *s);
  * Add paths to the stage, remove them and check if they exist.
  */
 int stage_add_path(struct stage *s, const char *path, struct stat st,
-                   struct object_id *oid);
+                   struct object_id *oid, unsigned int flags);
 int stage_remove_path(struct stage *s, const char *path);
 int stage_has_path(struct stage *s, const char *path);
 

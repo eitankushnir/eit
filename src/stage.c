@@ -120,14 +120,12 @@ static int index_on_stage(struct stage *s, const char *path, int *is_on_stage) {
 }
 
 int stage_add_path(struct stage *s, const char *path, struct stat st,
-                   struct object_id *oid) {
+                   struct object_id *oid, unsigned int flags) {
   int is_on_stage;
   size_t i = index_on_stage(s, path, &is_on_stage);
-  if (is_on_stage) {
-    s->entries[i]->st = st;
-    s->entries[i]->mode = normalize_mode(st.st_mode);
-    s->entries[i]->oid = *oid;
-    return 0;
+  if (is_on_stage && flags == 0) {
+    stage_remove_path(s, path);
+    return stage_add_path(s, path, st, oid, 0);
   }
 
   s->entries = xrealloc(s->entries, ++s->entries_nr, struct stage_entry *);
@@ -140,32 +138,37 @@ int stage_add_path(struct stage *s, const char *path, struct stat st,
   new_ent->st = st;
   new_ent->path_len = strlen(path);
   new_ent->mode = normalize_mode(st.st_mode);
-  new_ent->flags = 0;
+  new_ent->flags = flags;
   s->entries[i] = new_ent;
   return 0;
 }
 
 int stage_remove_path(struct stage *s, const char *path) {
   int is_on_stage;
-  size_t i = index_on_stage(s, path, &is_on_stage);
+  size_t c = 0;
+  do {
+    size_t i = index_on_stage(s, path, &is_on_stage);
 
-  if (!is_on_stage)
-    return -1;
+    if (!is_on_stage)
+      break;
 
-  free(s->entries[i]->path);
-  free(s->entries[i]);
+    c++;
+    free(s->entries[i]->path);
+    free(s->entries[i]);
 
-  for (size_t j = i; j < s->entries_nr - 1; j++) {
-    s->entries[j] = s->entries[j + 1];
-  }
-  if (s->entries_nr - 1 == 0) {
-    free(s->entries);
-    s->entries = NULL;
-    s->entries_nr = 0;
-  } else {
-    s->entries = xrealloc(s->entries, --s->entries_nr, struct stage_entry *);
-  }
-  return 0;
+    for (size_t j = i; j < s->entries_nr - 1; j++) {
+      s->entries[j] = s->entries[j + 1];
+    }
+    if (s->entries_nr - 1 == 0) {
+      free(s->entries);
+      s->entries = NULL;
+      s->entries_nr = 0;
+    } else {
+      s->entries = xrealloc(s->entries, --s->entries_nr, struct stage_entry *);
+    }
+  } while (is_on_stage);
+
+  return c == 0 ? -1 : 0;
 }
 
 int stage_has_path(struct stage *s, const char *path) {

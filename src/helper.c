@@ -196,7 +196,7 @@ int normalize_mode(int mode) {
     return 0100644;
   }
 
-  return -1;
+  return mode;
 }
 
 void string_list_free(struct string_list *list) {

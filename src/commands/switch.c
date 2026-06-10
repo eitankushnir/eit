@@ -46,9 +46,9 @@ int cmd_switch(int argc, char **argv, struct repository *repo) {
 
   char *branch_name = argv[1];
   struct ref_store *s = repo_get_ref_store(repo);
-  if (!create && repo_count_worktree_changes(repo) > 0) {
-    die("Error: You have unstaged changes");
-  }
+  // if (!create && repo_count_worktree_changes(repo) > 0) {
+  //   die("Error: You have unstaged changes");
+  // }
 
   if (force_create || create) {
     ref_store_parse_head(s);

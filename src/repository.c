@@ -209,7 +209,7 @@ enum staging_error repo_stage_file(struct repository *repo, const char *path) {
   if (res != 0)
     return STAGING_FAILED;
 
-  res = stage_add_path(stage, relpath, st, &oid);
+  res = stage_add_path(stage, relpath, st, &oid, 0);
   if (res != 0)
     return STAGING_FAILED;
 
@@ -245,6 +245,8 @@ static enum write_tree_error repo_write_tree_helper(
   size_t i = start;
   while (i < s->entries_nr) {
     struct stage_entry *ent = s->entries[i];
+    if (ent->flags != 0)
+      return NOT_MERGED;
     const char *basename;
 
     if (skip_prefix(ent->path, prefix, &basename)) {
@@ -417,6 +419,7 @@ void construct_stage_helper(struct repository *repo, struct tree *tree, const ch
       new_ent->path_len = path.len;
       new_ent->flags = 0;
       new_ent->oid = ent->oid;
+      memset(&new_ent->st, 0, sizeof(struct stat));
       s->entries[s->entries_nr - 1] = new_ent;
     }
   }
@@ -631,7 +634,24 @@ int repo_path_iterator_next(struct path_iterator *iter, const char **out_path) {
 }
 
 void repo_path_iterator_free(struct path_iterator *iter) {
-  struct repo_path_iterator *rp = xmalloc(1, struct repo_path_iterator);
+  struct repo_path_iterator *rp = (struct repo_path_iterator *)iter;
   rp->fs->iter.free(&rp->fs->iter);
   free(rp);
+}
+
+void repo_stage_conflict(struct repository *repo, struct stage_entry *base, struct stage_entry *a, struct stage_entry *b, struct string_list *conflicted_merge) {
+  FILE *conflict = fopen(base->path, "wb");
+  for (size_t i = 0; i < conflicted_merge->nr; i++) {
+    fputs(conflicted_merge->values[i], conflict);
+  }
+  fclose(conflict);
+
+  stage_remove_path(repo_get_stage(repo), base->path);
+  base->st.st_mode = base->mode;
+  a->st.st_mode = a->mode;
+  b->st.st_mode = b->mode;
+
+  stage_add_path(repo_get_stage(repo), base->path, base->st, &base->oid, 1);
+  stage_add_path(repo_get_stage(repo), a->path, a->st, &a->oid, 2);
+  stage_add_path(repo_get_stage(repo), b->path, b->st, &b->oid, 3);
 }

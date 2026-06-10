@@ -348,8 +348,11 @@ struct string_list *merge_diffs(struct string_list *base, struct string_list *a,
     j++;
   }
 
-  for (size_t k = 0; k < merge->nr; k++) {
-    printf("%s", merge->values[k]);
+  for (size_t k = prev_end + 1; k < base->nr; k++) {
+    string_list_insert(merge, "%s", base->values[k]);
   }
+
+  hunk_list_free(a_hunks);
+  hunk_list_free(b_hunks);
   return merge;
 }

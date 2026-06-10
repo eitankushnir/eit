@@ -48,8 +48,12 @@ int cmd_commit(int argc, char **argv, struct repository *repo) {
   }
 
   struct object_id tree_oid;
-  if (repo_write_stage_as_tree(repo, &tree_oid) != WRITE_TREE_SUCCESS) {
-    die("Error: Failed to commit changes");
+  enum write_tree_error e = repo_write_stage_as_tree(repo, &tree_oid);
+  if (e != WRITE_TREE_SUCCESS) {
+    if (e == NOT_MERGED) {
+      die("Error: Please resolve all merge conflicts first");
+    } else
+      die("Error: Failed to commit changes");
   }
 
   struct ref_store *refs = repo_get_ref_store(repo);

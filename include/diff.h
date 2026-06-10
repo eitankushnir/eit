@@ -51,4 +51,13 @@ void print_differences(struct lcs_pairs *pairs, struct string_list *a, struct st
 struct hunk_list *hunk_list(struct string_list *a, struct string_list *b);
 void hunk_list_free(struct hunk_list *l);
 void print_hunks(struct hunk_list *l, struct string_list *a, struct string_list *b);
+
+bool hunk_collision(struct hunk_list *a, struct hunk_list *b);
+
+/*
+ * Merges the differences of a and b from base into a new list.
+ * If there are conflicts the list if returned with Conflict markers. and out_conflicts is set true.
+ * If there are not conflicts then out_conflicts is set false.
+ */
+struct string_list *merge_diffs(struct string_list *base, struct string_list *a, struct string_list *b, const char *a_name, const char *b_name, bool *out_conflicts);
 #endif

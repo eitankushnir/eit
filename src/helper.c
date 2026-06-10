@@ -246,3 +246,21 @@ void *file_read_raw(const char *path, size_t *out_size) {
   *out_size = raw_buf.len;
   return raw_buf.buf;
 }
+
+void string_list_insert(struct string_list *list, const char *fmt, ...) {
+  if (list->alloc < list->nr + 1) {
+    list->alloc = (list->nr + 1) * 2;
+    list->values = xrealloc(list->values, list->alloc, char *);
+  }
+
+  va_list vargs;
+  va_start(vargs, fmt);
+  size_t len = vsnprintf(NULL, 0, fmt, vargs);
+  va_end(vargs);
+
+  va_start(vargs, fmt);
+  char *finished_string = xmalloc(len + 1, char);
+  vsnprintf(finished_string, len + 1, fmt, vargs);
+  va_end(vargs);
+  list->values[list->nr++] = finished_string;
+}

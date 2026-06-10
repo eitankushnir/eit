@@ -490,7 +490,7 @@ void repo_delete_file(struct repository *repo, const char *path) {
   strbuf_addf(&fullpath, "%s/%s", repo->worktree, path);
 
   int res = 0;
-  while (fullpath.len != len || res != 0) {
+  while (fullpath.len >= len && res != 0) {
     res = remove(fullpath.buf);
     strbuf_setlen(&fullpath, last_index_of(fullpath.buf, '/'));
   }
@@ -640,18 +640,20 @@ void repo_path_iterator_free(struct path_iterator *iter) {
 }
 
 void repo_stage_conflict(struct repository *repo, struct stage_entry *base, struct stage_entry *a, struct stage_entry *b, struct string_list *conflicted_merge) {
-  FILE *conflict = fopen(base->path, "wb");
+  FILE *conflict = fopen(a->path, "wb");
   for (size_t i = 0; i < conflicted_merge->nr; i++) {
     fputs(conflicted_merge->values[i], conflict);
   }
   fclose(conflict);
 
-  stage_remove_path(repo_get_stage(repo), base->path);
-  base->st.st_mode = base->mode;
+  stage_remove_path(repo_get_stage(repo), a->path);
   a->st.st_mode = a->mode;
   b->st.st_mode = b->mode;
 
-  stage_add_path(repo_get_stage(repo), base->path, base->st, &base->oid, 1);
+  if (base) {
+    base->st.st_mode = base->mode;
+    stage_add_path(repo_get_stage(repo), base->path, base->st, &base->oid, 1);
+  }
   stage_add_path(repo_get_stage(repo), a->path, a->st, &a->oid, 2);
   stage_add_path(repo_get_stage(repo), b->path, b->st, &b->oid, 3);
 }

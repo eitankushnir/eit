@@ -6,7 +6,6 @@
 #include "object_pool.h"
 #include "object_store.h"
 #include "parse-options.h"
-#include "pathspec.h"
 #include "ref_store.h"
 #include "repository.h"
 #include "sha256.h"
@@ -170,9 +169,11 @@ int cmd_merge(int argc, char **argv, struct repository *repo) {
       struct string_list *base = raw_to_lines(base_raw, base_size);
 
       bool is_conflict;
-      struct string_list *merge = merge_diffs(base, a, b, "HEAD", merge_condidate, &is_conflict);
-      if (is_conflict)
+      struct string_list *merge = merge_diff_3_way(base, a, b, "HEAD", merge_condidate, &is_conflict);
+      if (is_conflict) {
+        printf("Conflict found while merging file: %s\n", base_ent->path);
         repo_stage_conflict(repo, base_ent, a_ent, b_ent, merge);
+      }
 
       free(a_raw);
       free(b_raw);
@@ -207,9 +208,11 @@ int cmd_merge(int argc, char **argv, struct repository *repo) {
       struct string_list *a = raw_to_lines(a_raw, a_size);
       struct string_list *b = raw_to_lines(b_raw, b_size);
 
-      struct hunk_list *hunks = hunk_list(a, b);
-      if (hunks->nr) {
-        die("CONFLICT %s is a new file in both %s and current branch", a_ent->path, merge_condidate);
+      bool conflict;
+      struct string_list *merge = merge_diff_2_way(a, b, "HEAD", merge_condidate, &conflict);
+      if (conflict) {
+        printf("Conflict found while merging file: %s\n", a_ent->path);
+        repo_stage_conflict(repo, NULL, a_ent, b_ent, merge);
       }
       i++;
       j++;

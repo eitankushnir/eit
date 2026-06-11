@@ -168,8 +168,12 @@ struct ignores **repo_get_ignores(struct repository *repo) {
       repo->ignores = xrealloc(repo->ignores, ++nr, struct ignores);
       repo->ignores[nr - 1] = parse_ignores(path);
     }
+    free(path);
   }
 
+  fs->free(fs);
+  pathspec_release(&spec);
+  strbuf_release(&ignores_spec);
   repo->ignores = xrealloc(repo->ignores, ++nr, struct ignores);
   repo->ignores[nr - 1] = NULL;
   return repo->ignores;

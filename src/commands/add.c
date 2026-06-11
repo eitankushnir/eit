@@ -47,6 +47,7 @@ int cmd_add(int argc, char **argv, struct repository *repo) {
     free(path);
   }
   pathspec_release(&spec);
+  it->free(it);
 
   if (matchc == 0)
     die("Error: Empty pathspec");

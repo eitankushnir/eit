@@ -217,7 +217,7 @@ enum staging_error repo_stage_file(struct repository *repo, const char *path) {
 }
 
 static int filter_ignored(const char *path, void *ignores) {
-  if (ends_with(path, REPO_DIR_NAME) || ends_with(path, ".git"))
+  if (ends_with(path, "/" REPO_DIR_NAME) || ends_with(path, "/.git"))
     return 1;
 
   struct ignores **ig = (struct ignores **)ignores;
@@ -493,7 +493,7 @@ void repo_delete_file(struct repository *repo, const char *path) {
   strbuf_addf(&fullpath, "%s/%s", repo->worktree, path);
 
   int res = 0;
-  while (fullpath.len >= len && res != 0) {
+  while (fullpath.len >= len && res == 0) {
     res = remove(fullpath.buf);
     strbuf_setlen(&fullpath, last_index_of(fullpath.buf, '/'));
   }
@@ -599,13 +599,18 @@ char *repo_config_get_string(struct repository *repo, const char *catergory, con
 
 struct path_iterator *repo_path_iterator_create(struct repository *repo) {
   struct repo_path_iterator *rp = xmalloc(1, struct repo_path_iterator);
-  rp->repo = repo;
-  rp->stage = repo_get_stage(repo);
+  struct stage *stage = repo_get_stage(repo);
   rp->fs = (struct fs_iterator *)fs_iterator_create(repo->worktree);
   rp->has_fs = rp->fs->iter.next(&rp->fs->iter, &rp->fs_preload) == 0;
   rp->fs->filter_func = filter_ignored;
   rp->fs->filter_data = repo_get_ignores(repo);
   rp->stage_idx = 0;
+  rp->worktree_path = repo->worktree;
+  rp->stage_paths = xmalloc(stage->entries_nr, char *);
+  for (size_t i = 0; i < stage->entries_nr; i++) {
+    rp->stage_paths[i] = stage->entries[i]->path;
+  }
+  rp->stage_path_count = stage->entries_nr;
 
   rp->iter.next = repo_path_iterator_next;
   rp->iter.free = repo_path_iterator_free;
@@ -613,17 +618,20 @@ struct path_iterator *repo_path_iterator_create(struct repository *repo) {
   return (struct path_iterator *)rp;
 }
 
+static int cmp(const void *a, const void *b) {
+  return strcmp((char *)a, (char *)b);
+}
 int repo_path_iterator_next(struct path_iterator *iter, const char **out_path) {
   struct repo_path_iterator *rp = (struct repo_path_iterator *)iter;
-  if (rp->stage_idx < rp->stage->entries_nr) {
+  if (rp->stage_idx < rp->stage_path_count) {
     struct strbuf fullpath = STRBUF_INIT;
-    char *path = rp->stage->entries[rp->stage_idx++]->path;
-    strbuf_addf(&fullpath, "%s/%s", rp->repo->worktree, path);
+    const char *path = rp->stage_paths[rp->stage_idx++];
+    strbuf_addf(&fullpath, "%s/%s", rp->worktree_path, path);
     *out_path = fullpath.buf;
     return 0;
   }
 
-  while (rp->has_fs && stage_has_path(rp->stage, repo_relative_path(rp->repo, rp->fs_preload))) {
+  while (rp->has_fs && bsearch(rp->fs_preload, rp->stage_paths, rp->stage_path_count, sizeof(char *), cmp)) {
     rp->has_fs = rp->fs->iter.next(&rp->fs->iter, &rp->fs_preload) == 0;
   }
 
@@ -639,6 +647,7 @@ int repo_path_iterator_next(struct path_iterator *iter, const char **out_path) {
 void repo_path_iterator_free(struct path_iterator *iter) {
   struct repo_path_iterator *rp = (struct repo_path_iterator *)iter;
   rp->fs->iter.free(&rp->fs->iter);
+  free(rp->stage_paths);
   free(rp);
 }
 

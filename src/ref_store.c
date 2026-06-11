@@ -163,5 +163,6 @@ void ref_store_detach_head(struct ref_store *store, struct object_id *oid) {
   struct hex_oid hex;
   fprintf(headfile, "%s", oid_to_hex(oid, &hex));
   store->head_mode = HEAD_DETACHED;
+  store->head_id = *oid;
   fclose(headfile);
 }

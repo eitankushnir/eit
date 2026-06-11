@@ -22,5 +22,6 @@ int cmd_config(int argc, char **argv, struct repository *repo);
 int cmd_diff(int argc, char **argv, struct repository *repo);
 int cmd_merge_base(int argc, char **argv, struct repository *repo);
 int cmd_merge(int argc, char **argv, struct repository *repo);
+int cmd_rm(int argc, char **argv, struct repository *repo);
 
 #endif

@@ -98,8 +98,9 @@ struct repo_path_iterator {
   const char *fs_preload;
   bool has_fs;
 
-  struct repository *repo;
-  struct stage *stage;
+  const char *worktree_path;
+  const char **stage_paths;
+  size_t stage_path_count;
   size_t stage_idx;
 };
 
